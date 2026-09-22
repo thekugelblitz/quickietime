@@ -39,7 +39,7 @@ export function MobileIsland({
         </div>
         <a href={authenticated ? '/dashboard' : '/auth'} onClick={onPreserve}>
           <LayoutDashboard size={21} />
-          <span>{authenticated ? 'Dashboard' : '[Free] Account'}</span>
+          <span>{authenticated ? 'Dashboard' : 'Free Account'}</span>
         </a>
         <button
           type="button"
@@ -67,7 +67,7 @@ export function MobileIsland({
               ['/guides', 'Writing guides'],
               ['/use-cases', 'Use cases'],
               ['/dashboard', 'Your dashboard'],
-              ['/auth', '[Free] Account'],
+              ['/auth', 'Free Account'],
               ['/billing', 'Billing history'],
               ['/faq', 'Questions, answered'],
               ['/contact', 'Get in touch']

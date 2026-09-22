@@ -1,16 +1,78 @@
 import {DatabaseSync,type SQLInputValue} from 'node:sqlite';
-import {mkdirSync,readFileSync,readdirSync} from 'node:fs';
+import {mkdirSync,chmodSync,readFileSync,readdirSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 let connection:DatabaseSync|undefined;
+
+function cleanDatabasePath(raw?:string):string{
+  if(!raw)return'data/quickietime.sqlite';
+  let p=raw.trim();
+  p=p.replace(/^["'\\]+|["'\\]+$/g,'').trim();
+  return p||'data/quickietime.sqlite';
+}
+
+function prepareDirectory(filePath:string){
+  if(filePath===':memory:')return;
+  try{
+    const dir=dirname(filePath);
+    mkdirSync(dir,{recursive:true,mode:0o777});
+    try{chmodSync(dir,0o777);}catch{}
+  }catch(err){
+    console.warn(`[SQLite] Directory creation notice for ${filePath}:`,err);
+  }
+}
+
+function initConnection(primaryPath:string):DatabaseSync{
+  if(primaryPath===':memory:'){
+    const db=new DatabaseSync(':memory:');
+    db.exec('PRAGMA foreign_keys=ON;');
+    return db;
+  }
+  const candidates=[
+    primaryPath,
+    join(process.cwd(),'data','quickietime.sqlite'),
+    '/tmp/quickietime.sqlite'
+  ];
+  let lastError:unknown;
+  for(const candidate of candidates){
+    try{
+      prepareDirectory(candidate);
+      const db=new DatabaseSync(candidate);
+      try{
+        db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;');
+      }catch{
+        db.exec('PRAGMA journal_mode=DELETE; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;');
+      }
+      return db;
+    }catch(err){
+      lastError=err;
+      console.warn(`[SQLite] Could not open database at ${candidate}:`,err);
+    }
+  }
+  throw lastError;
+}
+
 export function sqlite(){
  if(connection)return connection;
- const path=process.env.DATABASE_PATH||'data/quickietime.sqlite';
- if(path!==':memory:')mkdirSync(dirname(path),{recursive:true});
- const database=new DatabaseSync(path);database.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;');
+ const path=cleanDatabasePath(process.env.DATABASE_PATH);
+ const database=initConnection(path);
  database.exec('CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)');
- for(const file of readdirSync(join(process.cwd(),'drizzle')).filter(f=>f.endsWith('.sql')).sort()){
- if(database.prepare('SELECT 1 FROM schema_migrations WHERE name=?').get(file))continue;
- database.exec('BEGIN IMMEDIATE');try{database.exec(readFileSync(join(process.cwd(),'drizzle',file),'utf8'));database.prepare('INSERT INTO schema_migrations VALUES (?,?)').run(file,new Date().toISOString());database.exec('COMMIT')}catch(e){database.exec('ROLLBACK');database.close();throw e}
+ const drizzleDir=join(process.cwd(),'drizzle');
+ try{
+   for(const file of readdirSync(drizzleDir).filter(f=>f.endsWith('.sql')).sort()){
+     if(database.prepare('SELECT 1 FROM schema_migrations WHERE name=?').get(file))continue;
+     database.exec('BEGIN IMMEDIATE');
+     try{
+       database.exec(readFileSync(join(drizzleDir,file),'utf8'));
+       database.prepare('INSERT INTO schema_migrations VALUES (?,?)').run(file,new Date().toISOString());
+       database.exec('COMMIT');
+     }catch(e){
+       database.exec('ROLLBACK');
+       console.error(`[SQLite migration error in ${file}]:`,e);
+       throw e;
+     }
+   }
+ }catch(err){
+   console.warn('[SQLite migrations check notice]:',err);
  }
  connection=database;
  if(process.env.NODE_ENV!=='test'&&path!==':memory:'){

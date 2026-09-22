@@ -1,8 +1,8 @@
 import {DatabaseSync,backup} from 'node:sqlite';
 import {mkdirSync,readdirSync,statSync,unlinkSync} from 'node:fs';
 import {join} from 'node:path';
-const directory=process.env.BACKUP_DIR||'/app/backups';mkdirSync(directory,{recursive:true});
-const source=new DatabaseSync(process.env.DATABASE_PATH||'data/quickietime.sqlite',{readOnly:true});
+const directory=(process.env.BACKUP_DIR||'/app/backups').replace(/^["']|["']$/g,'').trim();mkdirSync(directory,{recursive:true});
+const source=new DatabaseSync((process.env.DATABASE_PATH||'data/quickietime.sqlite').replace(/^["']|["']$/g,'').trim(),{readOnly:true});
 const target=join(directory,'quickietime-'+new Date().toISOString().replace(/[:.]/g,'-')+'.sqlite');
 await backup(source,target);source.close();
 const check=new DatabaseSync(target,{readOnly:true});const result=check.prepare('PRAGMA integrity_check').get();check.close();if(result.integrity_check!=='ok')throw new Error('Backup integrity check failed.');

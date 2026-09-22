@@ -25,4 +25,4 @@ COPY --from=builder --chown=app:app /app/public ./public
 COPY --from=builder --chown=app:app /app/drizzle ./drizzle
 COPY --from=builder --chown=app:app /app/scripts/validate-env.mjs /app/scripts/validate-public-config.mjs /app/scripts/backup.mjs /app/scripts/maintenance.mjs ./scripts/
 EXPOSE 3000
-CMD ["sh","-c","node scripts/validate-env.mjs && node server.js"]
+CMD ["sh","-c","mkdir -p /app/data /app/backups && chmod 777 /app/data /app/backups 2>/dev/null || true; node scripts/validate-env.mjs && node server.js"]
