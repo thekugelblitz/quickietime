@@ -7,7 +7,7 @@ services:
         SITE_URL: ${SITE_URL:-https://qtai.click}
         SITE_OPERATOR: ${SITE_OPERATOR:-HostingSpell LLP}
         CONTACT_EMAIL: ${CONTACT_EMAIL:-support@qtai.click}
-        AI_PROVIDER: ${AI_PROVIDER:-cheaperinference}
+        AI_PROVIDER: ${AI_PROVIDER:-openai}
         SITE_INDEXABLE: ${SITE_INDEXABLE:-true}
     environment:
       SITE_URL: ${SITE_URL:-https://qtai.click}
@@ -19,11 +19,13 @@ services:
       ADMIN_SETUP_TOKEN: ${ADMIN_SETUP_TOKEN:-}
       TRUST_PROXY: "true"
       DATABASE_PATH: /app/data/quickietime.sqlite
-      AI_PROVIDER: ${AI_PROVIDER:-cheaperinference}
-      AI_MODEL: ${AI_MODEL:-gpt-5.6-luna}
-      CHEAPERINFERENCE_API_KEY: ${CHEAPERINFERENCE_API_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      CHEAPERINFERENCE_API_KEY: ${CHEAPERINFERENCE_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -31,9 +33,14 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
     expose:
       - "3000"
+    ports:
+      - "${PORT:-3000}:3000"
     volumes:
       - quickietime_data:/app/data
       - quickietime_backups:/app/backups
+    networks:
+      - dokploy-network
+      - default
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -41,6 +48,12 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+
 volumes:
   quickietime_data:
   quickietime_backups:
+
+networks:
+  dokploy-network:
+    external: true
+  default:

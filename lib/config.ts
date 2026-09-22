@@ -11,19 +11,27 @@ export const toolCatalog = [
     { id: 'social', name: 'Social caption writer', description: 'Turn an idea into a post worth reading.', example: 'We just launched a midnight coffee delivery service for students. Announce the launch with a playful call to action.' },
     { id: 'headlines', name: 'Headline & subject lines', description: 'Concise headline and email subject alternatives.', example: 'A newsletter about simple ways to speed up a WordPress website.' },
 ] as const;
-export const planCaps = {guest:{words:300,lines:20,input:4000},account:{words:700,lines:50,input:10000}};
+export const planCaps = {guest:{words:300,lines:20,input:1500},account:{words:700,lines:50,input:3000}};
+export const MICRO_TASK_DISCLAIMER = "⚡ Quickie Micro-Tasks: Text boxes have tight character bounds by design to guarantee sub-second generation, zero timeouts, and minimal AI cost. For long essays or conversational rambling, standard chat is better suited.";
 export const inputSchema = z.object({
- idea:z.string().trim().min(3).max(24000), context:z.string().trim().max(3000).default(''),
+ idea:z.string().trim().min(3).max(5000), context:z.string().trim().max(500).default(''),
  tones:z.array(z.enum(tones)).min(1).max(8), chaos:z.number().int().min(1).max(10),
  count:z.union([z.literal(1),z.literal(3),z.literal(5),z.literal(10),z.literal(15)]),
  avoid:z.array(z.string().max(8000)).max(15).default([]),tool:z.enum(toolIds).default('tagline'),
  format:z.enum(['plain','markdown','whatsapp']).default('plain'),maxWords:z.number().int().min(20).max(700).default(150),
  maxLines:z.number().int().min(0).max(50).default(0),project:z.string().trim().max(80).default(''),
  length:z.enum(['punchy','balanced','descriptive','short','standard','detailed','custom']).default('balanced'),
- audience:z.string().trim().max(200).default(''),purpose:z.string().trim().max(300).default(''),
+ audience:z.string().trim().max(150).default(''),purpose:z.string().trim().max(150).default(''),
  channel:z.enum(['general','email','support','chat','instagram','linkedin','x','headline','subject']).default('general'),
  structure:z.enum(['paragraph','bullets']).default('paragraph'),rewriteSize:z.enum(['shorter','similar','longer']).default('similar'),
- hashtags:z.boolean().default(false),parentId:z.string().uuid().optional()
+ hashtags:z.boolean().default(false),parentId:z.string().uuid().optional(),
+ useByok:z.boolean().optional(),
+ byok:z.object({
+  provider:z.string(),
+  apiKey:z.string().optional(),
+  model:z.string().optional(),
+  baseUrl:z.string().optional()
+ }).optional()
 }).strict();
 export const transformSchema=inputSchema.extend({text:z.string().min(1).max(8000),action:z.enum(actions)});
 export const resultSchema=z.object({text:z.string().trim().min(1).max(8000),style:z.array(z.string().max(30)).min(1).max(3),angle:z.string().max(200),confidence:z.number().min(0).max(1)});
@@ -37,6 +45,8 @@ export type Entry = {
     results: Result[];
     createdAt: string;
     parentId?:string; rootId?:string; kind?:'generation'|'transform'|'edit'; title?:string;
+    byok?: boolean;
+    provider?: string;
 };
 export const copyMessage = 'Stolen successfully.';
 
@@ -44,7 +54,13 @@ export type Tool=typeof toolIds[number];
 export const isDocument=(t:Tool)=>['rewrite','summarize','reply'].includes(t);
 export const creativeTool=(t:Tool)=>['tagline','social','headlines'].includes(t);
 export function countOptions(t:Tool,auth:boolean):number[]{return t==='tagline'?(auth?[3,5,10,15]:[3,5]):t==='headlines'?(auth?[3,5,10]:[3,5]):t==='social'?(auth?[1,3,5]:[1,3]):[1]}
-export function inputLimit(t:Tool,auth:boolean){return t==='summarize'?(auth?24000:12000):['rewrite','reply'].includes(t)?(auth?16000:8000):4000}
+export function inputLimit(t:Tool,auth:boolean):number{
+  if(t==='summarize')return auth?3000:1500;
+  if(t==='rewrite')return auth?2000:1000;
+  if(t==='reply')return auth?1500:800;
+  if(t==='social')return auth?1000:600;
+  return auth?500:300;
+}
 export const wordCount=(text:string)=>text.trim()?text.trim().split(/\s+/u).length:0;
 export function defaultBrief(tool:Tool):Brief{return {...inputSchema.parse({idea:'draft',tool,tones:tool==='summarize'?['Neutral']:tool==='reply'?['Clear','Polite']:tool==='rewrite'?['Clear']:['Clever'],chaos:creativeTool(tool)?4:1,count:isDocument(tool)?1:tool==='social'?1:5, length:tool==='tagline'?'balanced':'standard',channel:tool==='reply'?'email':tool==='social'?'instagram':tool==='headlines'?'headline':'general',maxWords:150}),idea:''}}
 

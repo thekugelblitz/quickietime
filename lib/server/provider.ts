@@ -16,47 +16,161 @@ export interface AIProvider {
 export type AIConfig = {
     AI_PROVIDER?: string;
     AI_MODEL?: string;
+    BASE_URL?: string;
     OPENAI_API_KEY?: string;
     OPENROUTER_API_KEY?: string;
     CHEAPERINFERENCE_API_KEY?: string;
+    ANTHROPIC_API_KEY?: string;
+    REPLICATE_API_TOKEN?: string;
+    CUSTOM_API_KEY?: string;
+    BYOK_API_KEY?: string;
 };
 export class ProviderError extends Error {
     constructor(public code: string) { super(code); }
 }
 export function providerSettings(config: AIConfig) {
-    switch (config.AI_PROVIDER || 'openai') {
-        case 'openai': return { key: config.OPENAI_API_KEY, endpoint: 'https://api.openai.com/v1/chat/completions', model: config.AI_MODEL || 'gpt-4.1-mini' };
-        case 'openrouter': return { key: config.OPENROUTER_API_KEY, endpoint: 'https://openrouter.ai/api/v1/chat/completions', model: config.AI_MODEL || 'openai/gpt-4.1-mini' };
-        case 'cheaperinference': return { key: config.CHEAPERINFERENCE_API_KEY, endpoint: 'https://api.cheaperinference.com/v1/chat/completions', model: config.AI_MODEL || 'gpt-5.6-luna' };
+    const prov = (config.AI_PROVIDER || 'openai').toLowerCase();
+    switch (prov) {
+        case 'openai': return { key: config.OPENAI_API_KEY || config.BYOK_API_KEY, endpoint: 'https://api.openai.com/v1/chat/completions', model: config.AI_MODEL || (config.AI_MODEL==='gpt-4.1-mini'?'gpt-4.1-mini':'gpt-4o-mini') };
+        case 'openrouter': return { key: config.OPENROUTER_API_KEY || config.BYOK_API_KEY, endpoint: 'https://openrouter.ai/api/v1/chat/completions', model: config.AI_MODEL || 'openai/gpt-4o-mini' };
+        case 'cheaperinference': return { key: config.CHEAPERINFERENCE_API_KEY || config.BYOK_API_KEY, endpoint: 'https://api.cheaperinference.com/v1/chat/completions', model: config.AI_MODEL || 'gpt-5.6-luna' };
+        case 'claude':
+        case 'anthropic': return { key: config.ANTHROPIC_API_KEY || config.BYOK_API_KEY, endpoint: 'https://api.anthropic.com/v1/messages', model: config.AI_MODEL || 'claude-3-5-haiku-20241022' };
+        case 'replicate': return { key: config.REPLICATE_API_TOKEN || config.BYOK_API_KEY, endpoint: config.BASE_URL || 'https://api.replicate.com/v1/chat/completions', model: config.AI_MODEL || 'meta/meta-llama-3-8b-instruct' };
+        case 'custom': return { key: config.CUSTOM_API_KEY || config.BYOK_API_KEY, endpoint: config.BASE_URL || 'https://api.openai.com/v1/chat/completions', model: config.AI_MODEL || 'gpt-4o-mini' };
         default: throw new ProviderError('INVALID_PROVIDER');
+    }
+}
+function parseAiResponse(raw: string) {
+    let clean = (raw || '').trim();
+    if (clean.startsWith('```')) {
+        clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    }
+    try {
+        const obj = JSON.parse(clean);
+        return Array.isArray(obj) ? { results: obj } : obj;
+    } catch {
+        const m = clean.match(/\{[\s\S]*\}/);
+        if (m) {
+            try {
+                const obj = JSON.parse(m[0]);
+                return Array.isArray(obj) ? { results: obj } : obj;
+            } catch {}
+        }
+        const arr = clean.match(/\[[\s\S]*\]/);
+        if (arr) {
+            try {
+                return { results: JSON.parse(arr[0]) };
+            } catch {}
+        }
+        throw new Error('INVALID_JSON');
     }
 }
 export function createProvider(config: AIConfig, transport: typeof fetch = fetch, onUsage?:(usage:{input:number;output:number;estimated:boolean})=>void): AIProvider {
     const { key, endpoint, model } = providerSettings(config);
+    const prov = (config.AI_PROVIDER || 'openai').toLowerCase();
     async function run(brief: Brief, text?: string, action?: string, authenticated=false, attempt=0, repair='') {
         if (!key)
             throw new ProviderError('AI_NOT_CONFIGURED');
         const budget=outputBudget(brief,authenticated,action);
         const {count}=budget;
         const prompt=systemPrompt+' '+taskInstructions[brief.tool]+` Output exactly ${count} distinct results. Across all results: at most ${budget.words} whitespace-separated words. Each result: at most ${budget.perWords} words and ${budget.characters} characters. ${budget.lines?`Across all results at most ${budget.lines} explicit lines including blank lines.`:''} Format: ${brief.format}. Markdown: headings, bold, emphasis and lists; no raw HTML. WhatsApp: *bold*, _italic_, ~strikethrough~, simple lists, no Markdown headings. Plain: no markup. Do not wrap drafts in code fences. ${action==='Make it shorter'?'Each result must be shorter than the source.':''} ${attempt?'Your previous draft failed validation: '+repair+'. Correct it. Stay comfortably below the ceilings; count words before returning.':''}`;
-        const response=await transport(endpoint,{method:'POST',signal:AbortSignal.timeout(45000),headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model,max_completion_tokens:Math.min(6000,budget.words*5+1200),messages:[{role:'system',content:prompt},{role:'user',content:JSON.stringify({brief:{...brief,chaos:brief.tool==='summarize'?1:brief.chaos},source:text,action,requiredCount:count})}],response_format:{type:'json_schema',json_schema:{name:'writing_results',strict:true,schema:{type:'object',properties:{results:{type:'array',items:{type:'object',properties:{text:{type:'string'},style:{type:'array',items:{type:'string'}},angle:{type:'string'},confidence:{type:'number'}},required:['text','style','angle','confidence'],additionalProperties:false}}},required:['results'],additionalProperties:false}}}})});
+        const maxTokens = Math.min(2500, Math.max(300, budget.words * 4 + 200));
+
+        let response: Response;
+        if (prov === 'claude' || prov === 'anthropic') {
+            response = await transport(endpoint, {
+                method: 'POST',
+                signal: AbortSignal.timeout(35000),
+                headers: {
+                    'x-api-key': key,
+                    'anthropic-version': '2023-06-01',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model,
+                    max_tokens: maxTokens,
+                    system: prompt,
+                    messages: [
+                        { role: 'user', content: JSON.stringify({ brief: { ...brief, chaos: brief.tool === 'summarize' ? 1 : brief.chaos }, source: text, action, requiredCount: count }) }
+                    ]
+                })
+            });
+        } else {
+            const reqBody: Record<string, unknown> = {
+                model,
+                max_tokens: maxTokens,
+                max_completion_tokens: maxTokens,
+                messages: [
+                    { role: 'system', content: prompt },
+                    { role: 'user', content: JSON.stringify({ brief: { ...brief, chaos: brief.tool === 'summarize' ? 1 : brief.chaos }, source: text, action, requiredCount: count }) }
+                ],
+                response_format: {
+                    type: 'json_schema',
+                    json_schema: {
+                        name: 'writing_results',
+                        strict: true,
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                results: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            text: { type: 'string' },
+                                            style: { type: 'array', items: { type: 'string' } },
+                                            angle: { type: 'string' },
+                                            confidence: { type: 'number' }
+                                        },
+                                        required: ['text', 'style', 'angle', 'confidence'],
+                                        additionalProperties: false
+                                    }
+                                }
+                            },
+                            required: ['results'],
+                            additionalProperties: false
+                        }
+                    }
+                }
+            };
+            response = await transport(endpoint, {
+                method: 'POST',
+                signal: AbortSignal.timeout(35000),
+                headers: {
+                    Authorization: `Bearer ${key}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(reqBody)
+            });
+        }
+
         if (!response.ok)
             throw new ProviderError('PROVIDER_UNAVAILABLE');
         const data = await response.json() as {
-            usage?: {prompt_tokens?:number;completion_tokens?:number};
+            usage?: {prompt_tokens?:number;completion_tokens?:number;input_tokens?:number;output_tokens?:number};
             choices?: {
                 message?: {
                     content?: string;
                     refusal?: string;
                 };
             }[];
+            content?: { text?: string }[];
         };
-        onUsage?.({input:data.usage?.prompt_tokens??Math.ceil((prompt.length+JSON.stringify(brief).length+(text?.length||0))/4),output:data.usage?.completion_tokens??Math.ceil((data.choices?.[0]?.message?.content?.length||0)/4),estimated:!Number.isFinite(data.usage?.prompt_tokens)||!Number.isFinite(data.usage?.completion_tokens)});
+        const inTok = data.usage?.prompt_tokens ?? data.usage?.input_tokens;
+        const outTok = data.usage?.completion_tokens ?? data.usage?.output_tokens;
+        const rawContent = data.choices?.[0]?.message?.content || data.content?.[0]?.text || '';
+        onUsage?.({
+            input: inTok ?? Math.ceil((prompt.length + JSON.stringify(brief).length + (text?.length || 0)) / 4),
+            output: outTok ?? Math.ceil(rawContent.length / 4),
+            estimated: !Number.isFinite(inTok) || !Number.isFinite(outTok)
+        });
         if (data.choices?.[0]?.message?.refusal)
             throw new ProviderError('CONTENT_REFUSED');
         let results;
         try {
-            results = z.object({ results: z.array(resultSchema).length(count) }).parse(JSON.parse(data.choices?.[0]?.message?.content || '')).results;
+            const parsedObj = parseAiResponse(rawContent);
+            results = z.object({ results: z.array(resultSchema).length(count) }).parse(parsedObj).results;
         }
         catch {
             if(attempt===0)return run(brief,text,action,authenticated,1,'Return valid JSON with the exact requested result count and all required fields');
@@ -71,3 +185,4 @@ export function createProvider(config: AIConfig, transport: typeof fetch = fetch
     }
     return { generateTaglines: (b,auth) => run(b,undefined,undefined,auth), transformTagline: (b,t,a,auth) => run(b,t,a,auth) };
 }
+

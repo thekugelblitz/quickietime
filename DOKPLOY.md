@@ -19,8 +19,40 @@ ADMIN_SETUP_TOKEN=YOUR_THIRD_RANDOM_VALUE
 
 The operator and contact mailbox are defaults based on this project. Confirm the mailbox exists and receives support messages; change CONTACT_EMAIL if needed. Public identity settings are build-time values, so rebuild when changing them. Runtime values must match.
 
-3. In Dokploy's Domains tab add **qtai.click**, select service **quickietime**, container port **3000**, and enable HTTPS. DNS already points to your server; confirm the A/AAAA records match the intended node. No host port mapping is needed.
+3. In Dokploy's Domains tab add **qtai.click**, select service **quickietime**, container port **3000**, and enable HTTPS (Certificate: Let's Encrypt).
 4. Deploy. The container health endpoint is `/api/health`. SQL migrations run automatically.
+
+### Resolving the "404 page not found" error on qtai.click
+
+If browsing `https://qtai.click` returns a 404 error, check these items:
+
+1. **Traefik Network Attachment**:
+   Dokploy's Traefik reverse proxy routes traffic through the external Docker network `dokploy-network`.
+   In `docker-compose.yml`, `quickietime` is attached to `dokploy-network`. If `dokploy-network` does not exist on your server, create it once via terminal:
+   ```bash
+   docker network create dokploy-network
+   ```
+2. **Domain Configuration in Dokploy**:
+   - Go to your Compose project in Dokploy -> **Domains** tab.
+   - Domain: `qtai.click`
+   - Service: `quickietime`
+   - Container Port: `3000` (NOT 80 or 8080)
+   - Path: `/`
+   - HTTPS: Enabled (Let's Encrypt)
+3. **Environment Validation**:
+   Next.js validates required variables upon container launch (`scripts/validate-env.mjs`). If `AUTH_SECRET` (min 32 chars) or `SETTINGS_ENCRYPTION_KEY` (exact 64 hex chars) are missing or malformed, the container stops before listening, causing Traefik to serve a 404.
+   Inspect container logs in Dokploy:
+   ```bash
+   docker logs $(docker ps -q -f name=quickietime)
+   ```
+4. **Alternative Dokploy Deployment (Single Application)**:
+   If you prefer deploying QuickieTime as an Application rather than Docker Compose in Dokploy:
+   - Create an Application in Dokploy from your Git repository.
+   - Build Type: **Dockerfile** (pointing to `Dockerfile` at root).
+   - Port: `3000`.
+   - Set the same environment variables in the Application Environment tab.
+   - In the Domains tab, map `qtai.click` to Port 3000.
+
 5. Open **https://qtai.click/bhai**. Enter the setup token and choose your admin email and a password of at least 12 characters. This one-time setup is permanently disabled once an admin exists. Remove ADMIN_SETUP_TOKEN from Dokploy and redeploy.
 6. In **Connections & costs**, configure AI, SMTP, payment gateways and your actual cost assumptions. These are encrypted in the database; updates apply to new requests immediately. Existing environment credentials remain optional fallbacks, but newly saved dashboard values take precedence. A secret field left blank keeps the saved value. Secrets are never sent back to the browser.
 7. Set up and test email delivery. Customer sign-in uses verified email codes; administrator sign-in is separate and does not require SMTP.

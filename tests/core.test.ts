@@ -254,3 +254,104 @@ test('all three gateways create hosted checkout and only grant verified paid ord
 test('suspended accounts lose sessions and cannot access saved data',async()=>{const id=crypto.randomUUID();testCookie(id);const r=await adminPost(adminRequest({id,suspended:true,reason:'test suspension'},adminTestCookie),actionContext('users'));assert.equal(r.status,200);assert.equal(user(request({},id)),null);assert.equal((await getHistory(request({},id))).status,401)});
 test('webhook handler rejects forged events and processes signed Stripe events once',async()=>{const {webhook}=await import('../lib/server/gateways');const o=makeOrder('buyer2',commercePlan(),'stripe','',crypto.randomUUID());commerceDb().prepare('UPDATE orders SET provider_id=? WHERE id=?').run('cs_webhook',o.id);const body=JSON.stringify({id:'evt_success_test',type:'checkout.session.completed',data:{object:{id:'cs_webhook'}}});await assert.rejects(()=>webhook('stripe',new Request('https://quickie.test/api/webhooks/stripe',{method:'POST',body,headers:{'stripe-signature':'bad'}})));const before=walletBalance('buyer2'),t=Math.floor(Date.now()/1000),sig=createHmac('sha256','whsec_test').update(t+'.'+body).digest('hex'),original=globalThis.fetch;globalThis.fetch=async()=>Response.json({id:'cs_webhook',client_reference_id:o.id,payment_status:'paid',amount_total:o.amount,currency:o.currency});try{for(let i=0;i<2;i++)await webhook('stripe',new Request('https://quickie.test/api/webhooks/stripe',{method:'POST',body,headers:{'stripe-signature':`t=${t},v1=${sig}`}}));assert.equal(walletBalance('buyer2'),before+100)}finally{globalThis.fetch=original}});
 test('PayPal webhook verification is checked server-side before processing',async()=>{const {verifyPaypal}=await import('../lib/server/gateways');const original=globalThis.fetch;try{globalThis.fetch=async(url)=>Response.json(String(url).endsWith('/oauth2/token')?{access_token:'test'}:{verification_status:'FAILURE'});assert.equal(await verifyPaypal(new Headers(),{id:'fake-event'}),false)}finally{globalThis.fetch=original}});
+
+test('BYOK generation bypasses credit deduction and routes with custom key', async () => {
+    const original = globalThis.fetch;
+    let authHeader = '';
+    globalThis.fetch = async (_url, init) => {
+        authHeader = new Headers(init?.headers).get('Authorization') || '';
+        return fixtureFetch();
+    };
+    try {
+        testCookie('byok-tester');
+        const initialUsage = await (await import('../lib/server/credits')).availableCredits('byok-tester', 20, 'byok-tester');
+        const r = new Request('https://quickie.test/api/generate', {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                origin: 'https://quickie.test',
+                cookie: testCookie('byok-tester')
+            },
+            body: JSON.stringify({
+                ...brief,
+                byok: {
+                    provider: 'openai',
+                    apiKey: 'sk-user-custom-key',
+                    model: 'gpt-4o-mini'
+                }
+            })
+        });
+        const res = await generate(r);
+        assert.equal(res.status, 200);
+        const data = await res.json() as { entry: { byok: boolean }; byok: boolean; remaining: number };
+        assert.equal(data.byok, true);
+        assert.equal(data.entry.byok, true);
+        assert.equal(authHeader, 'Bearer sk-user-custom-key');
+        // Credits should NOT have been deducted
+        const finalUsage = await (await import('../lib/server/credits')).availableCredits('byok-tester', 20, 'byok-tester');
+        assert.equal(finalUsage, initialUsage);
+    } finally {
+        globalThis.fetch = original;
+    }
+});
+
+test('shrunk input limits reject oversized briefs', () => {
+    // Taglines now limited to 500 characters
+    const oversizedTagline = { ...brief, tool: 'tagline', idea: 'a'.repeat(600) };
+    assert.equal(typeof validatePlan(inputSchema.parse(oversizedTagline), true), 'string');
+
+    // Summarize limited to 3000 characters (down from 24,000)
+    const oversizedSummarize = { ...brief, tool: 'summarize', idea: 'a'.repeat(3500) };
+    assert.equal(typeof validatePlan(inputSchema.parse(oversizedSummarize), true), 'string');
+});
+
+test('widget endpoint serves Hello Dolly plain text and json snippets', async () => {
+    const { GET: widgetGet } = await import('../app/api/v1/widget/route');
+    const textReq = new Request('https://quickie.test/api/v1/widget?format=text');
+    const textRes = await widgetGet(textReq);
+    assert.equal(textRes.status, 200);
+    assert.equal(textRes.headers.get('content-type')?.includes('text/plain'), true);
+    assert.equal(textRes.headers.get('access-control-allow-origin'), '*');
+    const text = await textRes.text();
+    assert(text.length > 0);
+
+    const jsonReq = new Request('https://quickie.test/api/v1/widget?format=json');
+    const jsonRes = await widgetGet(jsonReq);
+    assert.equal(jsonRes.status, 200);
+    const data = await jsonRes.json() as { ok: boolean; snippet: { text: string } };
+    assert.equal(data.ok, true);
+    assert(data.snippet.text.length > 0);
+});
+
+test('export endpoint generates CSV, TXT, and JSON downloads', async () => {
+    const { GET: exportGet } = await import('../app/api/export/route');
+    testCookie('exporter');
+    const headers = { origin: 'https://quickie.test', cookie: testCookie('exporter') };
+
+    // Insert sample generation
+    const id = crypto.randomUUID();
+    const entry = { id, brief: inputSchema.parse(brief), results: output.results, createdAt: new Date().toISOString() };
+    await env.DB.prepare('INSERT INTO generations (id,user_id,payload,created_at) VALUES (?,?,?,?)').bind(id, 'exporter', JSON.stringify(entry), entry.createdAt).run();
+
+    // CSV
+    const csvRes = await exportGet(new Request('https://quickie.test/api/export?format=csv', { headers }));
+    assert.equal(csvRes.status, 200);
+    assert.equal(csvRes.headers.get('content-type')?.includes('text/csv'), true);
+    const csv = await csvRes.text();
+    assert(csv.includes('ID,Date,Tool,Project'));
+    assert(csv.includes(output.results[0].text));
+
+    // TXT
+    const txtRes = await exportGet(new Request('https://quickie.test/api/export?format=txt', { headers }));
+    assert.equal(txtRes.status, 200);
+    assert.equal(txtRes.headers.get('content-type')?.includes('text/plain'), true);
+    const txt = await txtRes.text();
+    assert(txt.includes('QuickieTime Export'));
+
+    // JSON
+    const jsonRes = await exportGet(new Request('https://quickie.test/api/export?format=json', { headers }));
+    assert.equal(jsonRes.status, 200);
+    const json = await jsonRes.json() as { totalGenerations: number };
+    assert.equal(json.totalGenerations >= 1, true);
+});
+
