@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {MobileIsland} from '@/components/mobile-island';
+import {ThemeToggle} from '@/components/theme-toggle';
 import {ExamplesCarousel} from '@/components/examples-carousel';
 import {ExploreNav} from '@/components/public-shell';
 import {useState,useEffect,useRef} from 'react';
-import {Zap,History,Moon,Sun,Heart,Sparkles,PenLine,AlignLeft,MessageCircle,Megaphone,Type,Copy} from 'lucide-react';
+import {Zap,History,Heart,Sparkles,PenLine,AlignLeft,MessageCircle,Megaphone,Type,Copy} from 'lucide-react';
 import {Toaster,toast} from 'sonner';
 import {Dialog,DialogContent,DialogTitle} from '@/components/ui/dialog';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
@@ -25,7 +26,89 @@ const messages=['Removing the unnecessary…','Finding the right words…','A li
 function restore(value:unknown,auth:boolean):Brief{const parsed=draftSchema.parse(value);if(isDocument(parsed.tool))parsed.count=1;else if(!countOptions(parsed.tool,auth).includes(parsed.count))parsed.count=countOptions(parsed.tool,auth)[0] as Brief['count'];if(parsed.tool!=='tagline'&&['balanced','punchy','descriptive'].includes(parsed.length))parsed.length='standard';parsed.maxWords=Math.min(parsed.maxWords,auth?700:300);if(!['reply','social'].includes(parsed.tool))parsed.maxLines=0;return parsed}
 export default function Home(){
 const [brief,setBrief]=useState<Brief>(()=>defaultBrief('tagline'));const [entry,setEntry]=useState<Entry|null>(null);const [usage,setUsage]=useState<Usage|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [history,setHistory]=useState<Entry[]>([]);const [favorites,setFavorites]=useState<Result[]>([]);const [historyOpen,setHistoryOpen]=useState(false);const [savedOpen,setSavedOpen]=useState(false);const [historyQuery,setHistoryQuery]=useState('');const [historyLoading,setHistoryLoading]=useState(false);const [historyError,setHistoryError]=useState('');const [projects,setProjects]=useState<string[]>([]);const [dark,setDark]=useState(false);const [message,setMessage]=useState(0);const [byokActive,setByokActive]=useState(false);const [byokProvider,setByokProvider]=useState('');const output=useRef<HTMLElement>(null);const retry=useRef<()=>void>(()=>{});const requestLock=useRef(false);const drafts=useRef<Partial<Record<Tool,Brief>>>({});const toolEntries=useRef<Partial<Record<Tool,Entry|null>>>({});const draftReady=useRef(false);
-useEffect(()=>{let active=true;queueMicrotask(()=>{setDark(local('qt-dark',false));const tool=new URLSearchParams(location.search).get('tool') as Tool;try{drafts.current=readDrafts(sessionStorage.getItem('qt-studio-drafts'))}catch{}const selected=toolCatalog.some(t=>t.id===tool)?tool:'tagline';setBrief(nextDraft(selected,drafts.current,''));draftReady.current=true;setHistory(local('qt-history',[]));setFavorites(local('qt-favorites',[]))});analytics.track('homepage_view');api<Usage>('usage').then(async u=>{if(!active)return;setUsage(u);setBrief(b=>restore(b,u.authenticated));const params=new URLSearchParams(location.search);let pending:unknown;try{if(params.has('resume')){const saved=local<{brief:Brief;entry:Entry|null;expires:number}|null>('qt-pending',null);if(saved&&saved.expires>Date.now()){setBrief(restore(saved.brief,u.authenticated));setEntry(u.authenticated?null:saved.entry);localStorage.removeItem('qt-pending')}}else{pending=sessionStorage.getItem('qt-continue');if(pending){const e=JSON.parse(String(pending)) as Entry;setBrief(restore(e.brief,u.authenticated));setEntry(e);sessionStorage.removeItem('qt-continue')}else{const b=sessionStorage.getItem('qt-reuse');if(b){setBrief(restore(JSON.parse(b),u.authenticated));sessionStorage.removeItem('qt-reuse')}}}}catch{toast.error('Could not restore that draft. Your saved history is still available.')}if(u.authenticated){setHistory([]);setFavorites([]);const [f,p,b]=await Promise.all([api<{results:Result[]}>('favorites'),api<{projects:string[]}>('projects'),api<{configured:boolean;enabled:boolean;provider:string}>('byok').catch(()=>({configured:false,enabled:false,provider:''}))]);if(active){setFavorites(f.results);setProjects(p.projects);if(b.configured&&b.enabled){setByokActive(true);setByokProvider(b.provider)}}}}).catch(()=>toast.error('Could not load your account data. Try refreshing.'));return()=>{active=false}},[]);
+useEffect(() => {
+  let active = true;
+  queueMicrotask(() => {
+    setDark(local('qt-dark', false));
+    const tool = new URLSearchParams(location.search).get('tool') as Tool;
+    try {
+      drafts.current = readDrafts(sessionStorage.getItem('qt-studio-drafts'));
+    } catch {}
+    const selected = toolCatalog.some(t => t.id === tool) ? tool : 'tagline';
+    setBrief(nextDraft(selected, drafts.current, ''));
+    draftReady.current = true;
+    setHistory(local('qt-history', []));
+    setFavorites(local('qt-favorites', []));
+  });
+  analytics.track('homepage_view');
+  api<Usage>('usage')
+    .then(async u => {
+      if (!active) return;
+      setUsage(u);
+      setBrief(b => restore(b, u.authenticated));
+      const params = new URLSearchParams(location.search);
+      let pending: unknown;
+      try {
+        if (params.has('resume')) {
+          const saved = local<{brief: Brief; entry: Entry | null; expires: number} | null>('qt-pending', null);
+          if (saved && saved.expires > Date.now()) {
+            setBrief(restore(saved.brief, u.authenticated));
+            setEntry(u.authenticated ? null : saved.entry);
+            localStorage.removeItem('qt-pending');
+          }
+        } else {
+          pending = sessionStorage.getItem('qt-continue');
+          if (pending) {
+            const e = JSON.parse(String(pending)) as Entry;
+            setBrief(restore(e.brief, u.authenticated));
+            setEntry(e);
+            sessionStorage.removeItem('qt-continue');
+          } else {
+            const b = sessionStorage.getItem('qt-reuse');
+            if (b) {
+              setBrief(restore(JSON.parse(b), u.authenticated));
+              sessionStorage.removeItem('qt-reuse');
+            }
+          }
+        }
+      } catch {
+        toast.error('Could not restore that draft. Your saved history is still available.');
+      }
+      if (u.authenticated) {
+        setHistory([]);
+        setFavorites([]);
+        try {
+          const [f, p, b] = await Promise.all([
+            api<{results: Result[]}>('favorites'),
+            api<{projects: string[]}>('projects'),
+            api<{configured: boolean; enabled: boolean; provider: string}>('byok').catch(() => ({
+              configured: false,
+              enabled: false,
+              provider: ''
+            }))
+          ]);
+          if (active) {
+            setFavorites(f.results);
+            setProjects(p.projects);
+            if (b.configured && b.enabled) {
+              setByokActive(true);
+              setByokProvider(b.provider);
+            }
+          }
+        } catch {
+          toast.error('Could not load your account data. Try refreshing.');
+        }
+      }
+    })
+    .catch(() => {
+      if (active) {
+        setUsage({authenticated: false, remaining: 5, limit: 5, configured: true});
+      }
+    });
+  return () => {
+    active = false;
+  };
+}, []);
 useEffect(()=>{if(!draftReady.current)return;drafts.current[brief.tool]=brief;try{sessionStorage.setItem('qt-studio-drafts',JSON.stringify(drafts.current))}catch{}},[brief]);
 useEffect(()=>{document.documentElement.classList.toggle('dark',dark)},[dark]);
 useEffect(()=>{if(!busy)return;const timer=setInterval(()=>setMessage(x=>(x+1)%messages.length),2200);return()=>clearInterval(timer)},[busy]);
@@ -40,7 +123,7 @@ async function favorite(r:Result){const has=favorites.some(f=>f.id===r.id);try{i
 async function saveEdit(r:Result,text:string,format:Brief['format']){if(!entry)return;const results=entry.results.map(x=>x.id===r.id?{...x,text}:x);if(usage?.authenticated){const data=await api<{entry:Entry}>('history',{id:entry.id,results,format},'PATCH');remember(data.entry)}else{remember({...entry,id:crypto.randomUUID(),parentId:entry.id,rootId:entry.rootId||entry.id,kind:'edit',brief:{...entry.brief,format},results:results.map(x=>({...x,id:crypto.randomUUID()})),createdAt:new Date().toISOString()})}toast.success('New version saved. No credit used.')}
 function openEntry(e:Entry){setEntry(e);try{setBrief(restore(e.brief,!!usage?.authenticated))}catch{setBrief({...defaultBrief('tagline'),idea:e.brief.idea})}setHistoryOpen(false);setTimeout(()=>output.current?.scrollIntoView({behavior:'smooth'}),50)}
 const historyResults=usage?.authenticated?history:history.filter(h=>[h.brief.idea,...h.results.map(r=>r.text)].join(' ').toLowerCase().includes(historyQuery.toLowerCase()));
-return <><a className="skip-link" href="#writing-studio">Skip to writing tools</a><Toaster position="bottom-center" richColors/><header className="site-header"><Link className="brand" href="/"><span className="brand-icon"><Zap fill="currentColor" size={22}/></span>QuickieTime</Link><nav aria-label="Main navigation"><button onClick={()=>setHistoryOpen(true)}><History size={17}/>History</button><button onClick={()=>setSavedOpen(true)}><Heart size={17}/>Favorites</button><button aria-label={dark?'Use light theme':'Use dark theme'} onClick={()=>{setDark(!dark);try{persist('qt-dark',!dark)}catch{}}}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button>{usage?.authenticated?<a className="signin" href="/dashboard" target="_self" onClick={preserve}>Dashboard ↗</a>:<Link className="signin" href="/auth?return_to=%2F%3Fresume%3D1" onClick={preserve}>Sign in / Sign up ↗</Link>}</nav></header><ExploreNav/><MobileIsland authenticated={!!usage?.authenticated} onHistory={()=>setHistoryOpen(true)} onPreserve={preserve}/>
+return <><a className="skip-link" href="#writing-studio">Skip to writing tools</a><Toaster position="bottom-center" richColors/><header className="site-header"><Link className="brand" href="/"><span className="brand-icon"><Zap fill="currentColor" size={22}/></span>QuickieTime</Link><nav aria-label="Main navigation"><button onClick={()=>setHistoryOpen(true)}><History size={17}/>History</button><button onClick={()=>setSavedOpen(true)}><Heart size={17}/>Favorites</button><ThemeToggle/>{usage?.authenticated?<a className="signin" href="/dashboard" target="_self" onClick={preserve}>Dashboard ↗</a>:<Link className="signin" href="/auth?return_to=%2F%3Fresume%3D1" onClick={preserve}>[Free] Account ↗</Link>}</nav></header><ExploreNav/><MobileIsland authenticated={!!usage?.authenticated} onHistory={()=>setHistoryOpen(true)} onPreserve={preserve}/>
 <main><section className="studio-intro"><div><span className="intro-kicker"><Sparkles size={15}/> YOUR LITTLE CREATIVE ADVANTAGE</span><h1>Big on personality.<br/><span>Small on effort.</span></h1><p className="intro-description">Instant AI micro-tools for quick tasks. Skip the chat prompts, generate sharp copy in seconds, and keep everything organized. Use free credits or Bring Your Own Key (BYOK) for unlimited generation.</p></div>
 <div className="credit-ticket"><span className="ticket-heading"><Zap size={16} fill="currentColor"/> {byokActive ? 'BYOK UNLIMITED ACTIVE' : 'YOUR DAILY WORD FUEL'}</span>
 {byokActive ? <>
@@ -55,7 +138,7 @@ return <><a className="skip-link" href="#writing-studio">Skip to writing tools</
 </>}
 </div></section>
 <div className="tool-nav" id="writing-studio"><Tabs value={brief.tool} onValueChange={t=>choose(t as Tool)}><TabsList>{toolCatalog.map(t=><TabsTrigger onClick={()=>choose(t.id)} disabled={busy} value={t.id} key={t.id}><span className="tool-tab-icon">{(()=>{const Icon=toolIcons[t.id];return <Icon size={18}/>})()}</span>{({tagline:'Taglines',rewrite:'Rewrite',summarize:'Summarize',reply:'Reply',social:'Captions',headlines:'Headlines'})[t.id]}</TabsTrigger>)}</TabsList></Tabs><label className="mobile-tool-picker">Writing tool<select disabled={busy} value={brief.tool} onChange={e=>choose(e.target.value as Tool)}>{toolCatalog.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label></div>
-<div className="workspace studio-workspace" data-tool={brief.tool}><div><BriefForm brief={brief} onChange={setBrief} authenticated={!!usage?.authenticated} busy={busy} remaining={usage?.remaining??null} onSubmit={()=>void generate()} projects={projects} isByok={byokActive} byokProvider={byokProvider}/><p className="allowance">Editing, saving, copying and downloading are free. Briefs stay in this tab when you switch tools.</p>{!byokActive&&usage?.remaining===0&&<div className="quota-notice"><h3>{usage.authenticated?'You’ve used today’s credits.':'Five down. More where that came from.'}</h3>{usage.authenticated?<p>Your free allowance resets at midnight UTC, or <a href="/dashboard">activate BYOK for unlimited generation →</a></p>:<><p>Sign in for 20 daily credits and cloud projects. Your current brief will be kept.</p><Link className="primary-button" href="/auth?return_to=%2F%3Fresume%3D1" onClick={preserve}>Sign in / Sign up</Link></>}</div>}{error&&<div className="error" role="alert"><strong>Let’s try that again.</strong><p>{error}</p><button disabled={busy} onClick={()=>retry.current()}>Retry</button></div>}</div>
+<div className="workspace studio-workspace" data-tool={brief.tool}><div><BriefForm brief={brief} onChange={setBrief} authenticated={!!usage?.authenticated} busy={busy} remaining={usage?.remaining??null} onSubmit={()=>void generate()} projects={projects} isByok={byokActive} byokProvider={byokProvider}/><p className="allowance">Editing, saving, copying and downloading are free. Briefs stay in this tab when you switch tools.</p>{!byokActive&&usage?.remaining===0&&<div className="quota-notice"><h3>{usage.authenticated?'You’ve used today’s credits.':'Five down. More where that came from.'}</h3>{usage.authenticated?<p>Your free allowance resets at midnight UTC, or <a href="/dashboard">activate BYOK for unlimited generation →</a></p>:<><p>Sign in for 20 daily credits and cloud projects. Your current brief will be kept.</p><Link className="primary-button" href="/auth?return_to=%2F%3Fresume%3D1" onClick={preserve}>[Free] Account ↗</Link></>}</div>}{error&&<div className="error" role="alert"><strong>Let’s try that again.</strong><p>{error}</p><button disabled={busy} onClick={()=>retry.current()}>Retry</button></div>}</div>
 <section ref={output} className="output studio-output" aria-live="polite" aria-busy={busy}><div className="panel-heading"><span className="step-tag">02 / YOUR {isDocument(brief.tool)?'DRAFT':'IDEAS'}</span><span className="little-note">{entry?'Saved '+(usage?.authenticated?'to your account':'in this browser'):'Room for something good.'}</span></div>{busy?<div className="empty"><span className="loading-pulse"/><h2>{messages[message]}</h2><p>One request, one credit. Any internal repairs are on us.</p></div>:entry?<><div className="output-title">{entry.results.length>1&&<button className="copy-all" onClick={()=>void copyAll()}><Copy size={15}/> Copy all saved results</button>}<h2>{isDocument(entry.brief.tool||'tagline')?'Your next draft.':'A few ways to say it.'}</h2><p>{entry.title||entry.brief.idea.slice(0,100)}</p>{entry.parentId&&<span className="version-label">New version · earlier versions remain in History</span>}</div><div className="results-list">{entry.results.map((r,i)=><WritingResult key={r.id} result={r} index={i} brief={restore(entry.brief,!!usage?.authenticated)} saved={favorites.some(f=>f.id===r.id)} busy={busy||(!byokActive&&usage?.remaining===0)} onFavorite={()=>void favorite(r)} onTransform={a=>void generate(restore(entry.brief,!!usage?.authenticated),r,a)} onSave={(text,format)=>saveEdit(r,text,format)}/>)}</div><button className="another" disabled={busy||(!byokActive&&usage?.remaining===0)} onClick={()=>void generate(restore(entry.brief,!!usage?.authenticated))}>{isDocument(brief.tool)?'Generate another version':'Generate alternatives'}{byokActive ? ' · BYOK' : ' · 1 credit'}</button></>:<StudioSample tool={brief.tool} onTry={tryStarter}/>}</section></div>
 <ExamplesCarousel onTry={(tool,idea,context)=>{if(requestLock.current)return;choose(tool);setBrief({...defaultBrief(tool),idea,context:context||''});document.getElementById('writing-studio')?.scrollIntoView({behavior:'smooth'});toast.success('Example loaded. Generate when ready.')}}/><ToolTable selected={brief.tool} onSelect={t=>{choose(t);document.querySelector('.tool-nav')?.scrollIntoView({behavior:'smooth'})}}/>
 <section className="faq"><div><span className="step-tag">QUICK ANSWERS</span><h2>A little less guesswork.</h2></div><div>{[['How do credits work?','Guests get 5 daily credits; signed-in users get 20. A generation or requested AI transformation costs one credit. Failed requests and internal repairs do not. Editing, copying and saving are free. Credits reset at midnight UTC.'],['Why do the tools have different settings?','A tagline needs a short per-idea length; a summary needs a source and detail level; a reply needs context and a channel. Each tool shows only the controls relevant to its task.'],['How much text can I generate?','Longer drafts and caption batches allow up to 300 output words for guests or 700 when signed in. Taglines and headlines use per-idea limits instead. Summaries stay shorter than the source.'],['Is my work public?','No. Guest history stays in your browser. Signed-in work belongs to your account. Your input is sent to our AI provider for generation; avoid passwords and sensitive data.'],['How do formatting and editing work?','Edit the draft for free, preview basic formatting, then copy its full Markdown or WhatsApp syntax. Saving creates a new version so you can return to the earlier draft.'],['Can I publish the output?','Review accuracy and suitability first. Check distinctive brand wording against existing trademarks. AI can generate similar wording for different people.']].map(([q,a])=><details key={q}><summary>{q}</summary><p>{a}</p></details>)}</div></section></main>

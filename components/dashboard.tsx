@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-html-link-for-pages, @next/next/no-location-assign-relative-destination -- Full document navigation is intentional across the studio/dashboard boundary. */
 import {MobileIsland} from './mobile-island';
+import {ThemeToggle} from './theme-toggle';
 import { downloadCard } from '@/lib/share';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Toaster, toast } from 'sonner';
@@ -290,6 +291,7 @@ add_action('admin_notices', 'quickietime_admin_notice');
         <nav>
           <a href="/">⚡ Writing Studio</a>
           <a href="/billing">Billing</a>
+          <ThemeToggle />
           <a href="/account">Account & Sign out</a>
         </nav>
       </header>
