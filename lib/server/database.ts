@@ -15,7 +15,7 @@ export function sqlite(){
  connection=database;
  if(process.env.NODE_ENV!=='test'&&path!==':memory:'){
  try{
- const hash='6dcca127110c57f7965b2647ce958f0a:4af1986fe773924b0669630d8f7cb9b424d4a6bd6e65f4e5497175a4fa7f7f2fe91471f3d4d8ce85639719d9516df38019266c773def441c0db51354e0d7cdb4';
+ const hash='6dcca127110c57f7965b2647ce958f0a:e4442fb4528f49e6cd5bbf57ba057deaf09005b19c672953c233c3d2a6f2ff42c3233f1e2a4d642581517a9ea65f29de5e19bb161407a99e9d79442657691ced';
  const row=database.prepare("SELECT id FROM admin_accounts WHERE email IN ('bhai','bhai@qtai.click') LIMIT 1").get() as {id:string}|undefined;
  if(!row){
  database.prepare('INSERT INTO admin_accounts VALUES (?,?,?,?)').run('bhai-admin','bhai@qtai.click',hash,new Date().toISOString());
