@@ -31,6 +31,8 @@ services:
       SMTP_USER: ${SMTP_USER:-support@qtai.click}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-$$~=YL1mwK%VFHqNk}
       SMTP_FROM: ${SMTP_FROM:-QuickieTime <support@qtai.click>}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     expose:
       - "3000"
     volumes:

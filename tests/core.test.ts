@@ -369,4 +369,35 @@ test('arbitrary passphrases for AUTH_SECRET and SETTINGS_ENCRYPTION_KEY are seal
     }
 });
 
+test('Google auth routes handle configuration status and redirects cleanly', async () => {
+    const { GET: configGet } = await import('../app/api/auth/config/route');
+    const { GET: googleGet } = await import('../app/api/auth/google/route');
+    const { saveSettings } = await import('../lib/server/settings');
+
+    // Without GOOGLE_CLIENT_ID
+    saveSettings({ GOOGLE_CLIENT_ID: '' });
+    const cfgRes1 = await configGet();
+    const cfg1 = await cfgRes1.json() as { google: { enabled: boolean; clientId: string } };
+    assert.equal(cfg1.google.enabled, false);
+
+    const unconfiguredRes = await googleGet(new Request('https://quickie.test/api/auth/google'));
+    assert.equal(unconfiguredRes.status, 503);
+
+    // With GOOGLE_CLIENT_ID
+    saveSettings({ GOOGLE_CLIENT_ID: 'google-client-id-xyz.apps.googleusercontent.com' });
+    const cfgRes2 = await configGet();
+    const cfg2 = await cfgRes2.json() as { google: { enabled: boolean; clientId: string } };
+    assert.equal(cfg2.google.enabled, true);
+    assert.equal(cfg2.google.clientId, 'google-client-id-xyz.apps.googleusercontent.com');
+
+    const redirectRes = await googleGet(new Request('https://quickie.test/api/auth/google?return_to=%2Fdashboard'));
+    assert.equal(redirectRes.status, 302);
+    const location = redirectRes.headers.get('location') || '';
+    assert(location.startsWith('https://accounts.google.com/o/oauth2/v2/auth'));
+    assert(location.includes('client_id=google-client-id-xyz.apps.googleusercontent.com'));
+    assert(location.includes('redirect_uri='));
+    assert(location.includes('state='));
+});
+
+
 

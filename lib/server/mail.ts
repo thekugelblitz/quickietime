@@ -2,14 +2,28 @@ import {settingsConfig} from './settings';
 import nodemailer from 'nodemailer';
 export async function sendLoginCode(email:string,code:string){
  const config=settingsConfig();
- if(!config.SMTP_HOST||!config.SMTP_FROM)throw new Error('EMAIL_NOT_CONFIGURED');
- const port=Number(config.SMTP_PORT||465);
+ const host=(config.SMTP_HOST||process.env.SMTP_HOST||'ncr1.int3rnet.net').replace(/^["']|["']$/g,'').trim();
+ let port=Number((config.SMTP_PORT||process.env.SMTP_PORT||'465').replace(/^["']|["']$/g,'').trim());
+ if(!Number.isFinite(port)||port<=0)port=465;
+ const user=(config.SMTP_USER||process.env.SMTP_USER||'support@qtai.click').replace(/^["']|["']$/g,'').trim();
+ let pass=(config.SMTP_PASSWORD||process.env.SMTP_PASSWORD||'$~=YL1mwK%VFHqNk').replace(/^["']|["']$/g,'').trim();
+ const from=(config.SMTP_FROM||process.env.SMTP_FROM||'QuickieTime <support@qtai.click>').replace(/^["']|["']$/g,'').trim();
+
+ if(pass.startsWith('=')||pass.startsWith('~=')){
+  pass='$'+pass.replace(/^\$+/, '');
+ }
+ if(pass.includes('YL1mwK%VFHqNk')&&!pass.startsWith('$')){
+  pass='$'+pass;
+ }
+
+ if(!host||!from)throw new Error('EMAIL_NOT_CONFIGURED');
  const transport=nodemailer.createTransport({
-  host:config.SMTP_HOST,
+  host,
   port,
   secure:port===465,
   requireTLS:port!==465,
-  auth:config.SMTP_USER?{user:config.SMTP_USER,pass:config.SMTP_PASSWORD}:undefined,
+  auth:user?{user,pass}:undefined,
+  tls:{servername:host},
   connectionTimeout:10000,
   greetingTimeout:10000,
   socketTimeout:15000,
@@ -18,7 +32,7 @@ export async function sendLoginCode(email:string,code:string){
  });
  try{
   await transport.sendMail({
-   from:config.SMTP_FROM,
+   from,
    to:email,
    subject:`Your QuickieTime sign-in code: ${code}`,
    text:`Your QuickieTime sign-in code is: ${code}\n\nThis code expires in 10 minutes. If you did not request this, you can safely ignore this email.`,
