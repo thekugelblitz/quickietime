@@ -33,8 +33,6 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
     expose:
       - "3000"
-    ports:
-      - "${PORT:-3000}:3000"
     volumes:
       - quickietime_data:/app/data
       - quickietime_backups:/app/backups

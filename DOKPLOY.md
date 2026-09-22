@@ -39,13 +39,15 @@ If browsing `https://qtai.click` returns a 404 error, check these items:
    - Container Port: `3000` (NOT 80 or 8080)
    - Path: `/`
    - HTTPS: Enabled (Let's Encrypt)
-3. **Environment Validation**:
+3. **Avoid Host Port 3000 Conflicts**:
+   Dokploy's web dashboard runs on host port `3000` by default. Do **not** bind host port 3000 (`ports: - 3000:3000`) in `docker-compose.yml`, which would cause `Bind for 0.0.0.0:3000 failed: port is already allocated`. Dokploy's Traefik routes directly to the container through `dokploy-network` on container port 3000 via `expose: - "3000"`.
+4. **Environment Validation**:
    Next.js validates required variables upon container launch (`scripts/validate-env.mjs`). If `AUTH_SECRET` (min 32 chars) or `SETTINGS_ENCRYPTION_KEY` (exact 64 hex chars) are missing or malformed, the container stops before listening, causing Traefik to serve a 404.
    Inspect container logs in Dokploy:
    ```bash
    docker logs $(docker ps -q -f name=quickietime)
    ```
-4. **Alternative Dokploy Deployment (Single Application)**:
+5. **Alternative Dokploy Deployment (Single Application)**:
    If you prefer deploying QuickieTime as an Application rather than Docker Compose in Dokploy:
    - Create an Application in Dokploy from your Git repository.
    - Build Type: **Dockerfile** (pointing to `Dockerfile` at root).
