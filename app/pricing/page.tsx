@@ -8,7 +8,7 @@ export const metadata=pageMetadata('AI writing plans & credit packs','Start with
 export default function Page(){
   let packsList: Pack[] = [];
   try {
-    packsList = plans().map(p=>({...p,providers:providers(p.currency)}));
+    packsList = plans().map(p=>({...p,providers:providers(p.currency, p.allowed_providers)}));
   } catch (err) {
     console.error('Failed to load plans on /pricing:', err);
   }

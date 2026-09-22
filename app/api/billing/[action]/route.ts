@@ -1,8 +1,64 @@
 import {z} from 'zod';
 import {plans,providers,makeOrder,getOrder} from '@/lib/server/billing';
-import {startCheckout,reconcile} from '@/lib/server/gateways';
+import {startCheckout,reconcile,cancelSubscription} from '@/lib/server/gateways';
 import {user,reply,failure,originOK,readBody} from '@/lib/server/runtime';
 import {sqlite} from '@/lib/server/database';
 import {rateLimit} from '@/lib/server/session';
-export async function GET(r:Request,{params}:{params:Promise<{action:string}>}){const {action}=await params;if(action==='plans')return reply({plans:plans().map(p=>({...p,providers:providers(p.currency)}))});const uid=user(r);if(!uid)return failure('UNAUTHORIZED','Sign in to view billing.',401);if(action==='orders')return reply({orders:sqlite().prepare('SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 100').all(uid),ledger:sqlite().prepare('SELECT delta,reason,created_at FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 100').all(uid)});return failure('NOT_FOUND','Not found.',404)}
-export async function POST(r:Request,{params}:{params:Promise<{action:string}>}){if(!originOK(r))return failure('ORIGIN','Request could not be verified.',403);const uid=user(r);if(!uid)return failure('UNAUTHORIZED','Sign in before checkout.',401);const {action}=await params;try{const body=await readBody(r);if(action==='checkout'){if(!rateLimit('checkout:'+uid,15,3600000))return failure('RATE_LIMIT','Too many checkout attempts. Try later.',429);const v=z.object({planId:z.string().uuid(),provider:z.enum(['stripe','paypal','razorpay']),coupon:z.string().max(32).default('').transform(x=>x.trim().toUpperCase()),requestKey:z.string().uuid()}).parse(body);const order=makeOrder(uid,v.planId,v.provider,v.coupon,v.requestKey);return reply({id:order.id,url:await startCheckout(order)})}if(action==='verify'){if(!rateLimit('verify-payment:'+uid,60,3600000))return failure('RATE_LIMIT','Please wait before checking again.',429);const v=z.object({id:z.string().uuid(),capture:z.boolean().default(false)}).parse(body);const o=getOrder(v.id);if(!o||o.user_id!==uid)return failure('NOT_FOUND','Order not found.',404);return reply({order:await reconcile(o.id,v.capture)})}return failure('NOT_FOUND','Not found.',404)}catch(e){return failure('CHECKOUT_FAILED',e instanceof z.ZodError?'Check your checkout details.':e instanceof Error?e.message:'Checkout unavailable.',400)}}
+
+export async function GET(r:Request,{params}:{params:Promise<{action:string}>}){
+  const {action}=await params;
+  if(action==='plans') {
+    return reply({
+      plans: plans().map(p => ({
+        ...p,
+        providers: providers(p.currency, p.allowed_providers)
+      }))
+    });
+  }
+  const uid=user(r);
+  if(!uid)return failure('UNAUTHORIZED','Sign in to view billing.',401);
+  if(action==='orders') {
+    return reply({
+      orders: sqlite().prepare('SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 100').all(uid),
+      subscriptions: sqlite().prepare('SELECT s.*,p.name plan_name FROM subscriptions s LEFT JOIN plans p ON p.id=s.plan_id WHERE s.user_id=? ORDER BY s.created_at DESC').all(uid),
+      ledger: sqlite().prepare('SELECT delta,reason,created_at FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 100').all(uid)
+    });
+  }
+  return failure('NOT_FOUND','Not found.',404);
+}
+
+export async function POST(r:Request,{params}:{params:Promise<{action:string}>}){
+  if(!originOK(r))return failure('ORIGIN','Request could not be verified.',403);
+  const uid=user(r);
+  if(!uid)return failure('UNAUTHORIZED','Sign in before checkout.',401);
+  const {action}=await params;
+  try{
+    const body=await readBody(r);
+    if(action==='checkout'){
+      if(!rateLimit('checkout:'+uid,15,3600000))return failure('RATE_LIMIT','Too many checkout attempts. Try later.',429);
+      const v=z.object({
+        planId:z.string().uuid(),
+        provider:z.enum(['stripe','paypal','razorpay']),
+        coupon:z.string().max(32).default('').transform(x=>x.trim().toUpperCase()),
+        requestKey:z.string().uuid()
+      }).parse(body);
+      const order=makeOrder(uid,v.planId,v.provider,v.coupon,v.requestKey);
+      return reply({id:order.id,url:await startCheckout(order)});
+    }
+    if(action==='verify'){
+      if(!rateLimit('verify-payment:'+uid,60,3600000))return failure('RATE_LIMIT','Please wait before checking again.',429);
+      const v=z.object({id:z.string().uuid(),capture:z.boolean().default(false)}).parse(body);
+      const o=getOrder(v.id);
+      if(!o||o.user_id!==uid)return failure('NOT_FOUND','Order not found.',404);
+      return reply({order:await reconcile(o.id,v.capture)});
+    }
+    if(action==='cancel-subscription'){
+      const v=z.object({id:z.string()}).parse(body);
+      const result=await cancelSubscription(uid,v.id);
+      return reply(result);
+    }
+    return failure('NOT_FOUND','Not found.',404);
+  }catch(e){
+    return failure('CHECKOUT_FAILED',e instanceof z.ZodError?'Check your checkout details.':e instanceof Error?e.message:'Checkout unavailable.',400);
+  }
+}

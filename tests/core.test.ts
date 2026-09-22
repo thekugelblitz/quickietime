@@ -232,9 +232,9 @@ test('share cards preserve paragraphs and wrap unbroken text without clipping',(
 
 import {sqlite as commerceDb} from '../lib/server/database';
 import {saveSettings,setting,publicSettings,seal,unseal} from '../lib/server/settings';
-import {makeOrder,fulfill,recordRefund,providers} from '../lib/server/billing';
+import {makeOrder,fulfill,recordRefund,providers,getPlan,recordSubscription,fulfillSubscriptionRenewal} from '../lib/server/billing';
 import {walletBalance,reserveAllowance,refundAllowance,ledger} from '../lib/server/credits';
-import {verifyHmac,reconcile,startCheckout} from '../lib/server/gateways';
+import {verifyHmac,reconcile,startCheckout,cancelSubscription} from '../lib/server/gateways';
 import {GET as adminGet,POST as adminPost} from '../app/api/admin/[action]/route';
 import {POST as billingPost} from '../app/api/billing/[action]/route';
 import {createHmac} from 'node:crypto';
@@ -245,7 +245,7 @@ let adminTestCookie='';
 test('admin setup requires its secret and cannot be repeated; customer sessions cannot access admin',async()=>{assert.equal((await adminPost(adminRequest({email:'boss@example.test',password:'a-secure-test-password',token:'wrong'}),actionContext('setup'))).status,401);const r=await adminPost(adminRequest({email:'boss@example.test',password:'a-secure-test-password',token:process.env.ADMIN_SETUP_TOKEN}),actionContext('setup'));assert.equal(r.status,200);adminTestCookie=r.headers.get('set-cookie')!.split(';')[0];assert.match(r.headers.get('set-cookie')!,/HttpOnly; SameSite=Strict/);assert.equal((await adminPost(adminRequest({email:'other@example.test',password:'a-secure-test-password',token:process.env.ADMIN_SETUP_TOKEN}),actionContext('setup'))).status,400);assert.equal((await adminGet(request({},'ordinary'),actionContext('users'))).status,401);assert.equal((await adminGet(adminRequest({},adminTestCookie),actionContext('users'))).status,200)});
 test('bhai login succeeds with bhai credentials and allows session and metrics access',async()=>{const r=await adminPost(new Request('https://quickie.test/api/admin/login',{method:'POST',headers:{origin:'https://quickie.test','content-type':'application/json'},body:JSON.stringify({email:'bhai',password:'ZXCert$432'})}),actionContext('login'));assert.equal(r.status,200);const cookie=r.headers.get('set-cookie')!.split(';')[0];const sessionRes=await adminGet(new Request('https://quickie.test/api/admin/session',{headers:{cookie}}),actionContext('session'));assert.equal(sessionRes.status,200);const metricsRes=await adminGet(new Request('https://quickie.test/api/admin/metrics',{headers:{cookie}}),actionContext('metrics'));assert.equal(metricsRes.status,200)});
 test('settings are encrypted, authenticated and secret values are masked',async()=>{saveSettings({STRIPE_SECRET_KEY:'sk_test_private',STRIPE_WEBHOOK_SECRET:'whsec_test',RAZORPAY_KEY_ID:'rzp_test',RAZORPAY_KEY_SECRET:'rzp_secret',RAZORPAY_WEBHOOK_SECRET:'rzp_hook',PAYPAL_CLIENT_ID:'pp_id',PAYPAL_CLIENT_SECRET:'pp_secret',PAYPAL_WEBHOOK_ID:'WH_test'});const row=commerceDb().prepare('SELECT value FROM settings WHERE key=?').get('STRIPE_SECRET_KEY');assert(!String(row?.value).includes('sk_test_private'));assert.equal(setting('STRIPE_SECRET_KEY'),'sk_test_private');assert.deepEqual(publicSettings().STRIPE_SECRET_KEY,{configured:true});assert.equal(unseal(seal('secret')),'secret');assert.throws(()=>unseal('broken'));assert.equal((await adminPost(request({AI_MODEL:'unauthorized'},'ordinary'),actionContext('settings'))).status,401);assert.equal((await adminPost(new Request('https://quickie.test',{method:'POST',headers:{origin:'https://evil.test',cookie:adminTestCookie}}),actionContext('settings'))).status,403)});
-function commercePlan(currency='USD'){const id=crypto.randomUUID();commerceDb().prepare('INSERT INTO plans VALUES (?,?,?,?,?,?,?,?)').run(id,'Test credits','Test only',100,1000,currency,1,new Date().toISOString());return id}
+function commercePlan(currency='USD'){const id=crypto.randomUUID();commerceDb().prepare('INSERT INTO plans (id,name,description,credits,amount,currency,active,created_at) VALUES (?,?,?,?,?,?,?,?)').run(id,'Test credits','Test only',100,1000,currency,1,new Date().toISOString());return id}
 test('server snapshots plan price and credits; coupon bounds, ownership and single claim are enforced',()=>{testCookie('buyer');testCookie('buyer2');const p=commercePlan();commerceDb().prepare('INSERT INTO coupons VALUES (?,?,?,?,1)').run('SAVE20',20,1,'2099-01-01T00:00:00.000Z');const key=crypto.randomUUID(),o=makeOrder('buyer',p,'stripe','SAVE20',key);assert.equal(o.amount,800);assert.equal(o.credits,100);assert.equal(makeOrder('buyer',p,'stripe','SAVE20',key).id,o.id);assert.throws(()=>makeOrder('buyer2',p,'stripe','SAVE20',crypto.randomUUID()));assert.throws(()=>makeOrder('buyer',p,'stripe','EXPIRED',crypto.randomUUID()));assert(!providers('INR').includes('paypal'));commerceDb().prepare('UPDATE plans SET amount=5000,credits=2 WHERE id=?').run(p);assert.equal(o.amount,800);assert.equal(o.credits,100)});
 test('fulfillment checks amount, currency and provider reference and is idempotent',()=>{const o=makeOrder('buyer',commercePlan(),'stripe','',crypto.randomUUID());commerceDb().prepare('UPDATE orders SET provider_id=? WHERE id=?').run('cs_fulfill',o.id);assert.throws(()=>fulfill(o.id,'wrong',1000,'USD'));assert.throws(()=>fulfill(o.id,'cs_fulfill',1,'USD'));assert.throws(()=>fulfill(o.id,'cs_fulfill',1000,'INR'));assert(fulfill(o.id,'cs_fulfill',1000,'USD'));assert(!fulfill(o.id,'cs_fulfill',1000,'USD'));assert.equal(walletBalance('buyer'),100);recordRefund(o.id,500);assert.equal(walletBalance('buyer'),50);recordRefund(o.id,500);assert.equal(walletBalance('buyer'),50);recordRefund(o.id,1000);assert.equal(walletBalance('buyer'),0);assert.throws(()=>recordRefund(o.id,1001))});
 test('daily credits are spent before purchased credits and failures return the correct allowance',async()=>{testCookie('credit-buyer');ledger('credit-buyer',2,'test');const a=await reserveAllowance('paid-test',1,'credit-buyer');assert.equal(a?.kind,'daily');assert.equal(walletBalance('credit-buyer'),2);const b=await reserveAllowance('paid-test',1,'credit-buyer');assert.equal(b?.kind,'paid');assert.equal(walletBalance('credit-buyer'),1);refundAllowance(b!);assert.equal(walletBalance('credit-buyer'),2);refundAllowance(a!);assert.equal((await reserveAllowance('paid-test',1,'credit-buyer'))?.kind,'daily')});
@@ -398,6 +398,72 @@ test('Google auth routes handle configuration status and redirects cleanly', asy
     assert(location.includes('client_id=google-client-id-xyz.apps.googleusercontent.com'));
     assert(location.includes('redirect_uri='));
     assert(location.includes('state='));
+});
+
+test('PayPal is available without PAYPAL_WEBHOOK_ID and respects allowed_providers per pack', () => {
+    saveSettings({
+        STRIPE_SECRET_KEY: 'sk_test_123',
+        PAYPAL_CLIENT_ID: 'paypal_client_id_test',
+        PAYPAL_CLIENT_SECRET: 'paypal_client_secret_test',
+        PAYPAL_WEBHOOK_ID: ''
+    });
+
+    // For USD, PayPal is included even without a webhook id
+    const usdProviders = providers('USD');
+    assert(usdProviders.includes('paypal'));
+    assert(usdProviders.includes('stripe'));
+
+    // Test allowed_providers filtering
+    const paypalOnly = providers('USD', 'paypal');
+    assert.deepEqual(paypalOnly, ['paypal']);
+
+    const stripeOnly = providers('USD', 'stripe');
+    assert.deepEqual(stripeOnly, ['stripe']);
+
+    const multiple = providers('USD', 'stripe,paypal');
+    assert(multiple.includes('stripe'));
+    assert(multiple.includes('paypal'));
+
+    // INR excludes PayPal
+    assert(!providers('INR').includes('paypal'));
+});
+
+test('recurring subscription plan creation, checkout snapshot, and renewal credit fulfillment', async () => {
+    testCookie('sub-buyer');
+    const planId = crypto.randomUUID();
+    commerceDb().prepare(`
+        INSERT INTO plans (id, name, description, credits, amount, currency, active, allowed_providers, billing_type, billing_interval, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 1, 'stripe,paypal', 'recurring', 'month', ?)
+    `).run(planId, 'Pro Monthly Subscription', '500 credits per month', 500, 2000, 'USD', new Date().toISOString());
+
+    const plan = getPlan(planId);
+    assert.equal(plan?.billing_type, 'recurring');
+    assert.equal(plan?.billing_interval, 'month');
+
+    // Make order on recurring plan
+    const orderKey = crypto.randomUUID();
+    const order = makeOrder('sub-buyer', planId, 'stripe', '', orderKey);
+    assert.equal(order.billing_type, 'recurring');
+    assert.equal(order.credits, 500);
+
+    // Record subscription and fulfill initial
+    const sub = recordSubscription('sub-buyer', planId, 'stripe', 'sub_stripe_test_123', 500, 2000, 'USD', 'month');
+    assert.equal(sub.status, 'active');
+    assert.equal(sub.credits_per_cycle, 500);
+
+    const initialWallet = walletBalance('sub-buyer');
+
+    // Webhook renewal event credits subscriber wallet
+    const renewed = fulfillSubscriptionRenewal('sub_stripe_test_123', 500, 'evt_renewal_test_1');
+    assert.equal(renewed, true);
+    assert.equal(walletBalance('sub-buyer'), initialWallet + 500);
+
+    // Cancel subscription
+    const cancelRes = await cancelSubscription('sub-buyer', sub.id);
+    assert.equal(cancelRes.status, 'cancelled');
+
+    // Wallet balance is preserved after cancellation
+    assert.equal(walletBalance('sub-buyer'), initialWallet + 500);
 });
 
 
