@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-type Pack={id:string;name:string;description:string;credits:number;amount:number;currency:string;providers:string[]};
+export type Pack={id:string;name:string;description:string;credits:number;amount:number;currency:string;providers:string[]};
 type Order={id:string;plan_name:string;amount:number;currency:string;status:string;credits:number;created_at:string;provider:string;refunded_amount:number;checkout_url?:string};
 const money=(amount:number,currency:string)=>new Intl.NumberFormat('en',{style:'currency',currency}).format(amount/100);
 async function billing<T>(action:string,body?:unknown){const r=await fetch('/api/billing/'+action,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw new Error(d.error?.message||'Could not load billing.');return d as T}
