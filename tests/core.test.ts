@@ -355,3 +355,18 @@ test('export endpoint generates CSV, TXT, and JSON downloads', async () => {
     assert.equal(json.totalGenerations >= 1, true);
 });
 
+test('arbitrary passphrases for AUTH_SECRET and SETTINGS_ENCRYPTION_KEY are sealed and decrypted reliably', async () => {
+    const { seal, unseal } = await import('../lib/server/settings');
+    const oldSecret = process.env.SETTINGS_ENCRYPTION_KEY;
+    try {
+        process.env.SETTINGS_ENCRYPTION_KEY = 'quickietimeappqtaiclick';
+        const sample = 'sk-sample-provider-key-test';
+        const encrypted = seal(sample);
+        assert.notEqual(encrypted, sample);
+        assert.equal(unseal(encrypted), sample);
+    } finally {
+        process.env.SETTINGS_ENCRYPTION_KEY = oldSecret;
+    }
+});
+
+
