@@ -46,6 +46,18 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.quickietime-websecure.rule=Host(`qtai.click`) || Host(`www.qtai.click`)"
+      - "traefik.http.routers.quickietime-websecure.entrypoints=websecure"
+      - "traefik.http.routers.quickietime-websecure.tls=true"
+      - "traefik.http.routers.quickietime-websecure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.quickietime-websecure.service=quickietime"
+      - "traefik.http.routers.quickietime-web.rule=Host(`qtai.click`) || Host(`www.qtai.click`)"
+      - "traefik.http.routers.quickietime-web.entrypoints=web"
+      - "traefik.http.routers.quickietime-web.service=quickietime"
+      - "traefik.http.services.quickietime.loadbalancer.server.port=3000"
 
 volumes:
   quickietime_data:

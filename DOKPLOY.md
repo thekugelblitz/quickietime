@@ -26,28 +26,45 @@ The operator and contact mailbox are defaults based on this project. Confirm the
 
 If browsing `https://qtai.click` returns a 404 error, check these items:
 
-1. **Traefik Network Attachment**:
+1. **Traefik Routing Labels**:
+   In `docker-compose.yml`, Traefik labels are defined directly on the `quickietime` service:
+   - `traefik.http.routers.quickietime-websecure.rule=Host(\`qtai.click\`) || Host(\`www.qtai.click\`)`
+   - `traefik.http.routers.quickietime-websecure.entrypoints=websecure`
+   - `traefik.http.routers.quickietime-web.entrypoints=web`
+   - `traefik.http.services.quickietime.loadbalancer.server.port=3000`
+   This automatically instructs Traefik to route both HTTP (port 80) and HTTPS (port 443) traffic for `qtai.click` directly to container port 3000 without requiring manual router configuration in Traefik.
+
+2. **Cloudflare SSL/TLS Setting**:
+   Since `qtai.click` is proxied through Cloudflare (orange cloud):
+   - In Cloudflare Dashboard -> **SSL/TLS**:
+   - Set encryption mode to **Full** (or **Flexible**).
+   - If set to "Full (strict)" before Let's Encrypt completes issuance on the origin, Cloudflare will reject the origin handshake. "Full" allows Cloudflare to connect securely to Traefik's certificate while providing full HTTPS to visitors.
+
+3. **Traefik Network Attachment**:
    Dokploy's Traefik reverse proxy routes traffic through the external Docker network `dokploy-network`.
    In `docker-compose.yml`, `quickietime` is attached to `dokploy-network`. If `dokploy-network` does not exist on your server, create it once via terminal:
    ```bash
    docker network create dokploy-network
    ```
-2. **Domain Configuration in Dokploy**:
+
+4. **Domain Configuration in Dokploy**:
+   If configuring via Dokploy's UI:
    - Go to your Compose project in Dokploy -> **Domains** tab.
    - Domain: `qtai.click`
    - Service: `quickietime`
-   - Container Port: `3000` (NOT 80 or 8080)
+   - Container Port: `3000`
    - Path: `/`
-   - HTTPS: Enabled (Let's Encrypt)
-3. **Avoid Host Port 3000 Conflicts**:
+   - Note: After modifying domains in Dokploy Compose, you **must click Redeploy** for Traefik to reload Compose container routes.
+
+5. **Avoid Host Port 3000 Conflicts**:
    Dokploy's web dashboard runs on host port `3000` by default. Do **not** bind host port 3000 (`ports: - 3000:3000`) in `docker-compose.yml`, which would cause `Bind for 0.0.0.0:3000 failed: port is already allocated`. Dokploy's Traefik routes directly to the container through `dokploy-network` on container port 3000 via `expose: - "3000"`.
-4. **Environment Validation**:
+6. **Environment Validation**:
    Next.js validates required variables upon container launch (`scripts/validate-env.mjs`). If `AUTH_SECRET` (min 32 chars) or `SETTINGS_ENCRYPTION_KEY` (exact 64 hex chars) are missing or malformed, the container stops before listening, causing Traefik to serve a 404.
    Inspect container logs in Dokploy:
    ```bash
    docker logs $(docker ps -q -f name=quickietime)
    ```
-5. **Alternative Dokploy Deployment (Single Application)**:
+7. **Alternative Dokploy Deployment (Single Application)**:
    If you prefer deploying QuickieTime as an Application rather than Docker Compose in Dokploy:
    - Create an Application in Dokploy from your Git repository.
    - Build Type: **Dockerfile** (pointing to `Dockerfile` at root).
