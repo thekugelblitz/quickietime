@@ -26,11 +26,11 @@ services:
       CHEAPERINFERENCE_API_KEY: ${CHEAPERINFERENCE_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-ncr1.int3rnet.net}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-support@qtai.click}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-$$~=YL1mwK%VFHqNk}
+      SMTP_FROM: ${SMTP_FROM:-QuickieTime <support@qtai.click>}
     expose:
       - "3000"
     volumes:
