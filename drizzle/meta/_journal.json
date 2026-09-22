@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790033698824,
+      "tag": "0000_lyrical_elektra",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790070242958,
+      "tag": "0001_stale_newton_destine",
+      "breakpoints": true
+    }
+  ]
+}

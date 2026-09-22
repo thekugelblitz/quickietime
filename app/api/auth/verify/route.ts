@@ -1,0 +1,5 @@
+import {z} from 'zod';
+import {originOK,readBody,reply,failure} from '@/lib/server/runtime';
+import {rateLimit,clientIp,codeHash,sessionCookie,safeReturn} from '@/lib/server/session';
+import {verifyCode} from '@/lib/server/auth';
+export async function POST(r:Request){if(!originOK(r))return failure('ORIGIN','Request could not be verified.',403);try{const {email,code,returnTo}=z.object({email:z.string().trim().email().max(254).transform(s=>s.toLowerCase()),code:z.string().regex(/^\d{6}$/),returnTo:z.string().max(2000).default('/?resume=1')}).parse(await readBody(r));if(!rateLimit('verify:'+codeHash(clientIp(r),'rate'),30,15*60000))return failure('RATE_LIMIT','Too many attempts. Try again later.',429);const token=verifyCode(email,code);if(!token)return failure('INVALID_CODE','That code is invalid or expired. Request a new one if needed.',400);const response=reply({ok:true,redirect:safeReturn(returnTo)});response.headers.set('Set-Cookie',sessionCookie(token));return response}catch{return failure('INVALID_INPUT','Check the email and six-digit code.',400)}}

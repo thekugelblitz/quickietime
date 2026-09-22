@@ -1,0 +1,12 @@
+import {createHash,createHmac,randomBytes} from 'node:crypto';
+import {sqlite} from './database';
+export const cookieName='qt_session';
+export function secret(){const key=process.env.AUTH_SECRET;if(!key||key.length<32)throw new Error('Set AUTH_SECRET to at least 32 random characters.');return key}
+export function hash(value:string){return createHash('sha256').update(value).digest('hex')}
+export function codeHash(email:string,code:string){return createHmac('sha256',secret()).update(email+':'+code).digest('hex')}
+export function sessionUser(cookie:string|null){const token=cookie?.split(';').map(s=>s.trim()).find(s=>s.startsWith(cookieName+'='))?.slice(cookieName.length+1);if(!token||!/^[a-f0-9]{64}$/.test(token))return null;return sqlite().prepare('SELECT a.id,a.email FROM sessions s JOIN accounts a ON a.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND a.suspended=0').get(hash(token),Date.now()) as {id:string;email:string}|undefined||null}
+export function createSession(userId:string){const token=randomBytes(32).toString('hex');sqlite().prepare('INSERT INTO sessions (token_hash,user_id,expires_at) VALUES (?,?,?)').run(hash(token),userId,Date.now()+30*86400000);return token}
+export function sessionCookie(token:string,clear=false){const secure=(process.env.SITE_URL||'').startsWith('https:');return `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear?0:30*86400}${secure?'; Secure':''}`}
+export function safeReturn(value:string){if(!value.startsWith('/')||value.startsWith('//')||value.includes('\\'))return '/?resume=1';const url=new URL(value,'https://app.local');return url.origin==='https://app.local'&&!url.pathname.startsWith('/auth')?url.pathname+url.search+url.hash:'/?resume=1'}
+export function rateLimit(key:string,max:number,windowMs:number){const now=Date.now();const row=sqlite().prepare('INSERT INTO rate_limits (key,count,expires_at) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN expires_at<=? THEN 1 ELSE count+1 END,expires_at=CASE WHEN expires_at<=? THEN excluded.expires_at ELSE expires_at END WHERE expires_at<=? OR count<? RETURNING count').get(key,now+windowMs,now,now,now,max);return !!row}
+export function clientIp(r:Request){/* Dokploy Traefik overwrites X-Real-IP. Never trust caller-provided identity headers. */return process.env.TRUST_PROXY==='true'?(r.headers.get('x-real-ip')||'unknown'):'local'}

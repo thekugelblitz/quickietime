@@ -1,0 +1,3 @@
+import {siteUrl} from './site';
+export function pageMetadata(title:string,description:string,path:string){return {title:title+' | QuickieTime',description,alternates:{canonical:path},openGraph:{type:'website' as const,title:title+' | QuickieTime',description,url:siteUrl+path,siteName:'QuickieTime'},twitter:{card:'summary' as const,title:title+' | QuickieTime',description}}}
+export function breadcrumb(title:string,path:string,parent?:{title:string;path:string}){const items=[{name:'QuickieTime',item:siteUrl+'/'},...(parent?[{name:parent.title,item:siteUrl+parent.path}]:[]),{name:title,item:siteUrl+path}];return {'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:items.map((x,i)=>({'@type':'ListItem',position:i+1,...x}))}}

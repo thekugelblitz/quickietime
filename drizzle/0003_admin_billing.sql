@@ -1,0 +1,14 @@
+ALTER TABLE accounts ADD COLUMN suspended INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE admin_accounts (id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE admin_sessions (token_hash TEXT PRIMARY KEY,admin_id TEXT NOT NULL REFERENCES admin_accounts(id) ON DELETE CASCADE,expires_at INTEGER NOT NULL);
+CREATE TABLE settings (key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE TABLE audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT,admin_id TEXT,action TEXT NOT NULL,target TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE plans (id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT NOT NULL,credits INTEGER NOT NULL CHECK(credits>0),amount INTEGER NOT NULL CHECK(amount>=100),currency TEXT NOT NULL CHECK(currency IN ('INR','USD')),active INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL);
+CREATE TABLE coupons (code TEXT PRIMARY KEY,percent INTEGER NOT NULL CHECK(percent BETWEEN 1 AND 90),max_uses INTEGER NOT NULL,expires_at TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE orders (id TEXT PRIMARY KEY,user_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,plan_id TEXT NOT NULL,plan_name TEXT NOT NULL,credits INTEGER NOT NULL,amount INTEGER NOT NULL,currency TEXT NOT NULL,provider TEXT NOT NULL,provider_id TEXT UNIQUE,checkout_url TEXT,status TEXT NOT NULL DEFAULT 'pending',coupon TEXT,request_key TEXT NOT NULL,created_at TEXT NOT NULL,paid_at TEXT,refunded_amount INTEGER NOT NULL DEFAULT 0,revoked_credits INTEGER NOT NULL DEFAULT 0,UNIQUE(user_id,request_key));
+CREATE INDEX orders_user ON orders(user_id,created_at);
+CREATE TABLE wallets (user_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,balance INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE credit_ledger (id TEXT PRIMARY KEY,user_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,delta INTEGER NOT NULL,reason TEXT NOT NULL,order_id TEXT,created_at TEXT NOT NULL);
+CREATE TABLE generation_events (id TEXT PRIMARY KEY,user_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,tool TEXT NOT NULL,provider TEXT NOT NULL,model TEXT NOT NULL,status TEXT NOT NULL,input_tokens INTEGER NOT NULL DEFAULT 0,output_tokens INTEGER NOT NULL DEFAULT 0,cost_usd REAL NOT NULL DEFAULT 0,cost_basis TEXT NOT NULL,latency_ms INTEGER NOT NULL,created_at TEXT NOT NULL);
+CREATE INDEX generation_events_created ON generation_events(created_at);
+CREATE TABLE webhook_events (id TEXT PRIMARY KEY,provider TEXT NOT NULL,event_type TEXT NOT NULL,created_at TEXT NOT NULL);

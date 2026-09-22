@@ -1,0 +1,46 @@
+services:
+  quickietime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SITE_URL: ${SITE_URL:-https://qtai.click}
+        SITE_OPERATOR: ${SITE_OPERATOR:-HostingSpell LLP}
+        CONTACT_EMAIL: ${CONTACT_EMAIL:-support@qtai.click}
+        AI_PROVIDER: ${AI_PROVIDER:-cheaperinference}
+        SITE_INDEXABLE: ${SITE_INDEXABLE:-true}
+    environment:
+      SITE_URL: ${SITE_URL:-https://qtai.click}
+      SITE_OPERATOR: ${SITE_OPERATOR:-HostingSpell LLP}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-support@qtai.click}
+      SITE_INDEXABLE: ${SITE_INDEXABLE:-true}
+      AUTH_SECRET: ${AUTH_SECRET:?Set a long random secret}
+      SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:?Set a persistent 64-character hex key}
+      ADMIN_SETUP_TOKEN: ${ADMIN_SETUP_TOKEN:-}
+      TRUST_PROXY: "true"
+      DATABASE_PATH: /app/data/quickietime.sqlite
+      AI_PROVIDER: ${AI_PROVIDER:-cheaperinference}
+      AI_MODEL: ${AI_MODEL:-gpt-5.6-luna}
+      CHEAPERINFERENCE_API_KEY: ${CHEAPERINFERENCE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    expose:
+      - "3000"
+    volumes:
+      - quickietime_data:/app/data
+      - quickietime_backups:/app/backups
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  quickietime_data:
+  quickietime_backups:

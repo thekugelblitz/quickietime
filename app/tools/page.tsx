@@ -1,0 +1,7 @@
+import Link from 'next/link';
+import {PublicPage,StudioCTA} from '@/components/public-page';
+import {toolCatalog} from '@/lib/config';
+import {toolSeo} from '@/lib/seo';
+import {pageMetadata} from '@/lib/page-seo';
+export const metadata=pageMetadata('Free AI writing tools','Explore six AI writing tools for taglines, rewriting, summaries, replies, social captions and headlines. Compare inputs, limits and practical uses.','/tools');
+export default function Page(){return <PublicPage title="A tool for the words you need." intro="A tagline is not an email. A summary is not a caption. Choose a tool with controls that fit the job." path="/tools"><div className="public-card-grid">{toolCatalog.map((t,i)=><article className="public-card" key={t.id}><span className="card-index">0{i+1}</span><h2><Link href={'/tools/'+t.id}>{t.name}</Link></h2><p>{t.description}</p><p className="card-detail">{toolSeo[t.id].bestFor}</p><Link className="text-link" href={'/tools/'+t.id}>Limits, examples & how to use it →</Link><Link className="tool-use" href={'/?tool='+t.id}>Use this tool</Link></article>)}</div><section className="prose-section"><h2>What one credit gets you</h2><p>A credit pays for one generation or requested AI transformation. A short-form batch can include several alternatives. A long-form tool produces one complete draft. Failed requests are refunded, and manual editing never uses a credit.</p><Link href="/pricing" className="text-link">Compare all plan limits →</Link></section><StudioCTA/></PublicPage>}
