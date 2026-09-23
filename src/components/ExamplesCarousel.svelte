@@ -57,12 +57,19 @@
           <p>{e.after}</p>
         </div>
         {#if ontry}
-          <button type="button" onclick={() => ontry?.(e.tool, i < toolCatalog.length ? starters[e.tool][0].idea : e.before, i < toolCatalog.length ? starters[e.tool][0].context : undefined)}>
-            Try this direction <ArrowUpRight size={16} />
+          <button
+            type="button"
+            aria-label={`Try ${e.label} in ${toolCatalog.find(t => t.id === e.tool)?.name || 'writing'} tool`}
+            onclick={() => ontry?.(e.tool, i < toolCatalog.length ? starters[e.tool][0].idea : e.before, i < toolCatalog.length ? starters[e.tool][0].context : undefined)}
+          >
+            Try this direction <ArrowUpRight size={16} aria-hidden="true" />
           </button>
         {:else}
-          <a href={`/?tool=${e.tool}`}>
-            Open this tool <ArrowUpRight size={16} />
+          <a
+            href={`/?tool=${e.tool}`}
+            aria-label={`Open ${toolCatalog.find(t => t.id === e.tool)?.name || 'writing'} tool`}
+          >
+            Open this tool <ArrowUpRight size={16} aria-hidden="true" />
           </a>
         {/if}
       </article>

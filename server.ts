@@ -215,9 +215,13 @@ main.all('*', (c) => {
   if (resolved) {
     let content: string | Buffer = readFileSync(resolved.filePath);
     const isHashed = path.startsWith('/_astro/');
-    const cacheControl = isHashed
+    const ext = extname(resolved.filePath).toLowerCase();
+    const isMediaOrFont = ['.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico', '.woff', '.woff2', '.ttf'].includes(ext);
+    const cacheControl = (isHashed || isMediaOrFont)
       ? 'public, max-age=31536000, immutable'
-      : 'public, max-age=0, must-revalidate';
+      : resolved.contentType.includes('text/html')
+      ? 'public, max-age=0, must-revalidate'
+      : 'public, max-age=86400';
 
     if (resolved.contentType.includes('text/html') && origin !== 'https://qtai.click') {
       let html = content.toString('utf-8');

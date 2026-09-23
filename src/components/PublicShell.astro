@@ -13,8 +13,8 @@ export const publicLinks = [
 ---
 
 <header class="site-header">
-  <a class="brand" href="/">
-    <span class="brand-icon">
+  <a class="brand" href="/" aria-label="QuickieTime homepage">
+    <span class="brand-icon" aria-hidden="true">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
@@ -25,7 +25,7 @@ export const publicLinks = [
     <a href="/about">About</a>
     <a href="/dashboard">Dashboard</a>
     <ThemeToggle client:load />
-    <a class="signin" href="/auth">Free Account ↗</a>
+    <a class="signin" href="/auth">Free Account <span aria-hidden="true">↗</span></a>
   </nav>
 </header>
 

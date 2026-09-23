@@ -14,11 +14,11 @@
     Key,
     X,
     Search,
+    ChevronDown,
   } from 'lucide-svelte';
   import BriefForm from './BriefForm.svelte';
   import WritingResult from './WritingResult.svelte';
   import StudioSample from './StudioSample.svelte';
-  import ThemeToggle from './ThemeToggle.svelte';
   import Toaster from './Toaster.svelte';
   import { toast } from '@/src/lib/toast.svelte';
   import {
@@ -68,6 +68,16 @@
   let streamingText = $state('');
 
   const pinnedTools: Tool[] = ['tagline', 'rewrite', 'summarize', 'social', 'headlines', 'reply'];
+  const pinnedLabels: Record<string, string> = {
+    tagline: 'Taglines',
+    rewrite: 'Rewrite',
+    summarize: 'Summarize',
+    reply: 'Reply',
+    social: 'Social',
+    headlines: 'Headlines',
+  };
+
+  const currentToolMeta = $derived(toolCatalog.find((t) => t.id === brief.tool) || toolCatalog[0]);
 
   const filteredCatalog = $derived(
     toolCatalog.filter((t) => {
@@ -382,21 +392,22 @@
 
 <!-- Tool Nav Bar -->
 <div class="tool-nav">
-  <div class="flex items-center justify-between gap-2 bg-[var(--ink)] p-2 rounded-2xl max-md:hidden" role="tablist">
-    <!-- Pinned tools -->
-    <div class="flex items-center gap-1.5 overflow-x-auto flex-1">
+  <!-- Desktop Nav -->
+  <div class="flex items-center justify-between gap-2 bg-[var(--ink)] p-2 rounded-2xl max-md:hidden" role="group" aria-label="Writing tools">
+    <!-- Pinned tools (no ugly horizontal scrollbar) -->
+    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1">
       {#each pinnedTools as pid}
         {@const t = toolCatalog.find((x) => x.id === pid)!}
         <button
           type="button"
-          role="tab"
-          aria-selected={brief.tool === t.id}
-          class={`flex items-center gap-2 py-2.5 px-3.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+          aria-pressed={brief.tool === t.id}
+          class={`flex items-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
             brief.tool === t.id
               ? 'bg-[var(--lime)] text-[#253114] shadow-md'
               : 'text-[var(--panel)] hover:bg-white/10'
           }`}
           onclick={() => selectTool(t.id)}
+          title={`${t.name} — ${t.description}`}
         >
           {#if t.id === 'tagline'}
             <Sparkles size={16} />
@@ -411,7 +422,7 @@
           {:else}
             <Type size={16} />
           {/if}
-          <span>{t.name}</span>
+          <span>{pinnedLabels[t.id] || t.name}</span>
         </button>
       {/each}
 
@@ -440,31 +451,79 @@
     </button>
   </div>
 
-  <!-- Mobile tool selector -->
-  <div class="mobile-tool-picker md:hidden">
-    <div class="flex items-center justify-between gap-2 mb-1.5">
-      <label for="mobile-tool" class="text-xs font-bold tracking-wider uppercase">Select tool</label>
+  <!-- Modern Mobile Tool Selector Bar -->
+  <div class="mobile-tool-bar md:hidden flex flex-col gap-2">
+    <!-- Active Tool Tap Card -->
+    <button
+      type="button"
+      class="w-full p-3 rounded-2xl bg-[var(--ink)] text-left flex items-center justify-between gap-3 shadow-lg border border-white/10 active:scale-[0.99] transition-all"
+      onclick={() => (catalogOpen = true)}
+      aria-label="Browse all 50 tools"
+    >
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-[var(--lime)] text-[#253114] flex items-center justify-center flex-none font-bold shadow-sm">
+          {#if brief.tool === 'tagline'}
+            <Sparkles size={20} />
+          {:else if brief.tool === 'rewrite'}
+            <PenLine size={20} />
+          {:else if brief.tool === 'summarize'}
+            <AlignLeft size={20} />
+          {:else if brief.tool === 'reply'}
+            <MessageCircle size={20} />
+          {:else if brief.tool === 'social'}
+            <Megaphone size={20} />
+          {:else}
+            <Type size={20} />
+          {/if}
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-sm font-bold text-[var(--panel)] truncate">
+              {currentToolMeta.name}
+            </span>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/15 text-[var(--lime)] uppercase tracking-wider">
+              {currentToolMeta.category}
+            </span>
+          </div>
+          <p class="text-xs text-[var(--panel)]/70 truncate mt-0.5">
+            {currentToolMeta.description}
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Pill -->
+      <div class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--lime)] text-[#253114] text-xs font-extrabold flex-none shadow-sm">
+        <span>50 Tools</span>
+        <ChevronDown size={14} />
+      </div>
+    </button>
+
+    <!-- Mobile Quick-Swipe Pinned Pills -->
+    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5" role="group" aria-label="Pinned writing tools">
+      {#each pinnedTools as pid}
+        {@const t = toolCatalog.find((x) => x.id === pid)!}
+        <button
+          type="button"
+          aria-pressed={brief.tool === t.id}
+          class={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            brief.tool === t.id
+              ? 'bg-[var(--ink)] text-[var(--lime)] ring-2 ring-[var(--lime)] shadow-sm'
+              : 'bg-[var(--panel)] text-[var(--ink)] border border-[var(--border)] hover:bg-[var(--muted)]'
+          }`}
+          onclick={() => selectTool(t.id)}
+        >
+          <span>{pinnedLabels[t.id] || t.name}</span>
+        </button>
+      {/each}
       <button
         type="button"
-        class="text-xs font-semibold text-[var(--primary)] underline flex items-center gap-1"
+        class="px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap bg-[var(--lime)] text-[#253114] shadow-sm flex items-center gap-1"
         onclick={() => (catalogOpen = true)}
       >
-        <Search size={12} /> Search all 50
+        <Search size={12} />
+        <span>All 50...</span>
       </button>
     </div>
-    <select
-      id="mobile-tool"
-      value={brief.tool}
-      onchange={(e) => selectTool((e.target as HTMLSelectElement).value as Tool)}
-    >
-      {#each toolCategories as cat}
-        <optgroup label={cat}>
-          {#each toolCatalog.filter((t) => t.category === cat) as t}
-            <option value={t.id}>{t.name} — {t.description}</option>
-          {/each}
-        </optgroup>
-      {/each}
-    </select>
   </div>
 </div>
 
@@ -560,40 +619,49 @@
 
 <!-- All 50 Tools Modal -->
 {#if catalogOpen}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onclick={() => (catalogOpen = false)}>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4" onclick={() => (catalogOpen = false)}>
     <div
-      class="relative w-full max-w-[880px] max-h-[90vh] rounded-3xl bg-[var(--panel)] border border-[var(--border)] p-6 text-[var(--ink)] shadow-2xl flex flex-col"
+      class="relative w-full max-w-[880px] max-h-[92vh] sm:max-h-[90vh] rounded-2xl sm:rounded-3xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-6 text-[var(--ink)] shadow-2xl flex flex-col"
       onclick={(e) => e.stopPropagation()}
     >
       <!-- Modal Header -->
-      <div class="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+      <div class="flex items-center justify-between pb-3 sm:pb-4 border-b border-[var(--border)]">
         <div>
           <div class="flex items-center gap-2">
-            <Sparkles size={20} class="text-[var(--primary)]" />
-            <h2 class="text-xl font-extrabold tracking-tight">AI Micro-Tool Directory</h2>
-            <span class="px-2.5 py-0.5 rounded-full bg-[var(--lime)] text-[#253114] text-xs font-black">50 tools</span>
+            <Sparkles size={18} class="text-[var(--primary)]" />
+            <h2 class="text-lg sm:text-xl font-extrabold tracking-tight">AI Micro-Tool Directory</h2>
+            <span class="px-2 py-0.5 rounded-full bg-[var(--lime)] text-[#253114] text-xs font-black">50 tools</span>
           </div>
-          <p class="text-xs text-[var(--subtle)] mt-1">Every tool runs on 1 credit or unlimited with BYOK. Select any tool to switch instantly.</p>
+          <p class="text-xs text-[var(--subtle)] mt-0.5">Every tool runs on 1 credit or unlimited with BYOK. Select any tool to switch instantly.</p>
         </div>
-        <button type="button" class="icon-button" onclick={() => (catalogOpen = false)}>
+        <button type="button" class="icon-button p-2" onclick={() => (catalogOpen = false)} aria-label="Close dialog">
           <X size={20} />
         </button>
       </div>
 
       <!-- Search & Filters -->
-      <div class="my-4 grid gap-3">
+      <div class="my-3 sm:my-4 grid gap-2.5 sm:gap-3">
         <div class="relative">
           <Search size={18} class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--subtle)]" />
           <input
             type="search"
-            placeholder="Search 50 tools by name, description or keywords (e.g. regex, recipe, sql, bio)..."
-            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--page)] text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            placeholder="Search 50 tools (e.g. regex, recipe, sql, bio)..."
+            class="w-full pl-10 pr-14 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--page)] text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             bind:value={catalogQuery}
           />
+          {#if catalogQuery}
+            <button
+              type="button"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[var(--subtle)] hover:text-[var(--ink)] p-1"
+              onclick={() => (catalogQuery = '')}
+            >
+              Clear
+            </button>
+          {/if}
         </div>
 
-        <!-- Category Pills -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold">
+        <!-- Category Pills (no ugly horizontal scrollbar) -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs font-semibold">
           <button
             type="button"
             class={`px-3 py-1.5 rounded-full transition-all whitespace-nowrap ${
@@ -622,10 +690,10 @@
         </div>
       </div>
 
-      <!-- Tools Grid -->
-      <div class="flex-1 overflow-y-auto pr-1 grid sm:grid-cols-2 gap-3 min-h-[300px]">
+      <!-- Tools Grid (Responsive 1-col on mobile, 2-col on tablet/desktop, with no-scrollbar) -->
+      <div class="flex-1 overflow-y-auto no-scrollbar pr-0.5 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 min-h-[250px]">
         {#if filteredCatalog.length === 0}
-          <div class="col-span-2 py-16 text-center text-[var(--subtle)]">
+          <div class="col-span-1 sm:col-span-2 py-16 text-center text-[var(--subtle)]">
             <p class="font-bold text-base">No tools found matching "{catalogQuery}"</p>
             <p class="text-xs mt-1">Try another keyword or select "All" categories.</p>
           </div>
@@ -633,9 +701,9 @@
           {#each filteredCatalog as t (t.id)}
             <button
               type="button"
-              class={`group text-left p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+              class={`group text-left p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all flex flex-col justify-between ${
                 brief.tool === t.id
-                  ? 'border-[var(--lime)] bg-[var(--lime)]/10 ring-2 ring-[var(--lime)]'
+                  ? 'border-[var(--lime)] bg-[var(--lime)]/10 ring-2 ring-[var(--lime)] shadow-sm'
                   : 'border-[var(--border)] bg-[var(--page)] hover:border-[var(--primary)] hover:bg-[var(--muted)]/50'
               }`}
               onclick={() => {
@@ -645,11 +713,11 @@
               }}
             >
               <div>
-                <div class="flex items-center justify-between gap-2 mb-1.5">
+                <div class="flex items-center justify-between gap-2 mb-1">
                   <span class="font-bold text-sm text-[var(--ink)] group-hover:text-[var(--primary)] transition-colors">
                     {t.name}
                   </span>
-                  <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[var(--muted)] text-[var(--subtle)]">
+                  <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[var(--muted)] text-[var(--subtle)] shrink-0">
                     {t.category}
                   </span>
                 </div>
@@ -658,7 +726,7 @@
                 </p>
               </div>
 
-              <div class="mt-3 pt-2.5 border-t border-[var(--border)]/60 flex items-center justify-between text-xs">
+              <div class="mt-2.5 pt-2 border-t border-[var(--border)]/60 flex items-center justify-between text-xs">
                 <span class="text-[11px] text-[var(--subtle)] font-mono truncate max-w-[200px]">
                   {t.example}
                 </span>

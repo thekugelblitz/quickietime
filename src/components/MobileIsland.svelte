@@ -17,21 +17,17 @@
     <span>Create</span>
   </a>
   {#if onhistory}
-    <button type="button" onclick={onhistory}>
+    <button type="button" onclick={onhistory} aria-label="View writing history">
       <History size={21} />
       <span>History</span>
     </button>
   {:else}
-    <a href="/tools">
+    <a href="/tools" aria-label="Browse 50 AI micro-tools">
       <Sparkles size={21} />
       <span>Tools</span>
     </a>
   {/if}
-  <div class="mobile-island-theme">
-    <ThemeToggle />
-    <span>Theme</span>
-  </div>
-  <a href={authenticated ? '/dashboard' : '/auth'} onclick={onpreserve}>
+  <a href={authenticated ? '/dashboard' : '/auth'} onclick={onpreserve} aria-label={authenticated ? 'Go to dashboard' : 'Create free account'}>
     <LayoutDashboard size={21} />
     <span>{authenticated ? 'Dashboard' : 'Free Account'}</span>
   </a>
@@ -67,9 +63,14 @@
           ['/faq', 'Questions, answered'],
           ['/contact', 'Get in touch']
         ] as [url, label]}
-          <a href={url} class="flex items-center justify-between border-b border-[var(--border)] py-3 px-2 text-base hover:text-[var(--primary)]" onclick={onpreserve}>
-            {label}
-            <span>↗</span>
+          <a
+            href={url}
+            class="flex items-center justify-between border-b border-[var(--border)] py-3 px-2 text-base hover:text-[var(--primary)]"
+            onclick={onpreserve}
+            aria-label={`Go to ${label}`}
+          >
+            <span>{label}</span>
+            <span aria-hidden="true">↗</span>
           </a>
         {/each}
       </nav>
@@ -77,6 +78,7 @@
         type="button"
         onclick={() => open = false}
         class="island-close mt-4 w-full flex items-center justify-center gap-2 py-3 text-sm text-[var(--subtle)] hover:text-[var(--ink)]"
+        aria-label="Close menu"
       >
         <X size={17} /> Close menu
       </button>

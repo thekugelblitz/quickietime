@@ -50,6 +50,7 @@
       <input
         type="search"
         placeholder="Filter 50 tools..."
+        aria-label="Filter 50 tools"
         class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-white/20 bg-white/10 text-white placeholder-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--lime)]"
         bind:value={query}
       />
@@ -57,7 +58,7 @@
   </div>
 
   <!-- Category filter bar -->
-  <div class="p-3 bg-[var(--panel)] border-b border-[var(--border)] flex items-center gap-1.5 overflow-x-auto text-xs font-semibold">
+  <div class="p-3 bg-[var(--panel)] border-b border-[var(--border)] flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs font-semibold">
     <button
       type="button"
       class={`px-3 py-1.5 rounded-full transition-all whitespace-nowrap ${
@@ -121,7 +122,7 @@
             </td>
             <td>
               {t.description}
-              <a class="tool-guide inline-block ml-2 text-xs text-[var(--primary)] underline" href={`/tools/${t.id}`}>Tips & examples</a>
+              <a class="tool-guide inline-block ml-2 text-xs text-[var(--link-color)] underline font-medium" href={`/tools/${t.id}`} aria-label={`Tips and examples for ${t.name}`}>Tips & examples</a>
             </td>
             <td>
               <button
