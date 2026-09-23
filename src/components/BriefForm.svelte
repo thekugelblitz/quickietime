@@ -53,15 +53,70 @@
   const cap = $derived(authenticated ? 700 : 300);
 
   const labelMap: Record<string, string> = {
-    tagline: 'What needs a tagline?',
-    rewrite: 'Paste your original text',
-    summarize: 'Paste the text to summarize',
-    reply: 'Paste the message you received',
-    social: 'What are you posting about?',
-    headlines: 'What is the content or offer?',
+    // Writing & Editing
+    'fix-grammar': 'Paste text to fix grammar & typos',
+    'shift-tone': 'Paste text to shift tone',
+    'shorten-text': 'Paste verbose text to shorten',
+    'expand-bullets': 'Enter raw bullet points to expand into narrative',
+    'rsvp-reply': 'Describe the event and your attendance response',
+    'headlines': 'What is the content, announcement, or offer?',
+    'social': 'What are you posting about?',
+    'rewrite': 'Paste the original text to rewrite',
+    'active-voice': 'Paste passive sentences to energize',
+    'translate-snippet': 'Paste text and specify target language',
+
+    // Summarization
+    'tldr': 'Paste text or email chain for a 3-bullet summary',
+    'summarize': 'Paste the text to summarize',
+    'meeting-takeaways': 'Paste meeting transcript or notes',
+    'explain-jargon': 'Enter jargon, acronym, or buzzword to demystify',
+    'eli5': 'What concept should be explained like you are 5?',
+    'book-summary': 'Enter book title and author to extract key frameworks',
+    'explain-code': 'Paste the code snippet to explain',
+    'review-pros-cons': 'Paste customer reviews to aggregate',
+
+    // Brainstorming & Ideation
+    'gift-ideas': 'Describe recipient age, interests, and budget',
+    'dinner-recipes': 'List the ingredients you currently have on hand',
+    'icebreakers': 'Describe your team or event context',
+    'tagline': 'What needs a tagline or brand name?',
+    'email-subjects': 'What is the email topic or promotion?',
+    'analogies': 'What abstract concept needs an analogy?',
+    'workout-alternatives': 'Which exercise do you want to substitute?',
+    'playlist-themes': 'Describe the mood, vibe, or activity',
+    'content-hooks': 'What is the topic of your video or presentation?',
+
+    // Technical & Administrative Shortcuts
+    'excel-formulas': 'Describe what you want to calculate in Excel / Sheets',
+    'regex-generator': 'Describe the text pattern to match or extract',
+    'format-converter': 'Paste raw text or list to convert (JSON/CSV/Table)',
+    'sql-queries': 'Describe what data you need from your database',
+    'placeholder-text': 'Describe the industry and page section context',
+    'dummy-data': 'Describe the fields or entities you need mock data for',
+    'cron-syntax': 'Describe the desired recurring schedule in plain English',
+    'css-fixes': 'Paste the broken CSS and describe the rendering bug',
+    'cli-commands': 'Describe the terminal task and target operating system',
+
+    // Professional Productivity & Organization
+    'polite-declines': 'Describe the invitation or request you want to decline',
+    'meeting-agendas': 'What is the meeting purpose and duration?',
+    'resume-bullets': 'Describe the task, project, or metric you accomplished',
+    'cover-letter-openers': 'Enter target job title, company, and background highlight',
+    'bio-writer': 'Enter key career milestones, skills, and current role',
+    'action-items': 'Paste notes, transcripts, or thoughts to organize',
+    'reply': 'Paste the received message and verified context',
+
+    // Lifestyle, Learning & Fun
+    'language-drills': 'Specify target language and conversational scenario',
+    'trivia-generator': 'Enter the topic, category, or era for trivia',
+    'packing-checklist': 'Enter destination, weather/season, and trip duration',
+    'micro-habits': 'What area or goal do you want to build a small habit for?',
+    'devil-advocate': 'What opinion or assumption do you want to stress-test?',
+    'math-solver': 'Enter the word problem or calculation to solve step-by-step',
+    'prompt-optimizer': 'Paste your draft prompt to optimize and enhance',
   };
 
-  const label = $derived(labelMap[brief.tool] || 'What is the subject?');
+  const label = $derived(labelMap[brief.tool] || 'What is your subject or request?');
   const availableTones = $derived(
     creativeTool(brief.tool)
       ? tones.filter((t) => !['Neutral', 'Polite'].includes(t))

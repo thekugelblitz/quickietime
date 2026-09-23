@@ -13,6 +13,7 @@
     Copy,
     Key,
     X,
+    Search,
   } from 'lucide-svelte';
   import BriefForm from './BriefForm.svelte';
   import WritingResult from './WritingResult.svelte';
@@ -26,6 +27,7 @@
     type Result,
     type Tool,
     toolCatalog,
+    toolCategories,
     defaultBrief,
     isDocument,
     countOptions,
@@ -53,6 +55,9 @@
   let historyOpen = $state(false);
   let savedOpen = $state(false);
   let byokOpen = $state(false);
+  let catalogOpen = $state(false);
+  let catalogQuery = $state('');
+  let selectedCategory = $state<string>('All');
   let historyQuery = $state('');
   let projects = $state<string[]>([]);
   let byokActive = $state(false);
@@ -61,6 +66,32 @@
   let byokModel = $state('');
   let byokBaseUrl = $state('');
   let streamingText = $state('');
+
+  const pinnedTools: Tool[] = ['tagline', 'rewrite', 'summarize', 'social', 'headlines', 'reply'];
+
+  const filteredCatalog = $derived(
+    toolCatalog.filter((t) => {
+      const matchCat = selectedCategory === 'All' || t.category === selectedCategory;
+      const q = catalogQuery.trim().toLowerCase();
+      const matchQuery =
+        !q ||
+        t.name.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q) ||
+        t.id.toLowerCase().includes(q);
+      return matchCat && matchQuery;
+    })
+  );
+
+  function loadSample() {
+    const s = starters[brief.tool]?.[0];
+    if (s) {
+      brief.idea = s.idea;
+      if (s.context) brief.context = s.context;
+      if (s.tones?.length) brief.tones = [...s.tones];
+      toast.show('Example loaded!', 'success');
+    }
+  }
 
   let drafts: Partial<Record<Tool, Brief>> = {};
   let toolEntries: Partial<Record<Tool, Entry | null>> = {};
@@ -312,7 +343,7 @@
 <div class="studio-intro">
   <div>
     <span class="intro-kicker">
-      <Zap size={14} class="tiny-zap" /> SIX SPECIALIZED AI WRITING TOOLS
+      <Zap size={14} class="tiny-zap" /> 50 SPECIALIZED AI MICRO-TOOLS
     </span>
     <h1>Small effort. <span>Better words.</span></h1>
     <p class="intro-description">
@@ -351,47 +382,87 @@
 
 <!-- Tool Nav Bar -->
 <div class="tool-nav">
-  <div class="grid grid-cols-6 gap-1 bg-[var(--ink)] p-1.5 rounded-2xl max-md:hidden" role="tablist">
-    {#each toolCatalog as t (t.id)}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={brief.tool === t.id}
-        class={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-semibold transition-all ${
-          brief.tool === t.id
-            ? 'bg-[var(--lime)] text-[#253114] shadow-md'
-            : 'text-[var(--panel)] hover:bg-white/10'
-        }`}
-        onclick={() => selectTool(t.id)}
-      >
-        {#if t.id === 'tagline'}
-          <Sparkles size={16} />
-        {:else if t.id === 'rewrite'}
-          <PenLine size={16} />
-        {:else if t.id === 'summarize'}
-          <AlignLeft size={16} />
-        {:else if t.id === 'reply'}
-          <MessageCircle size={16} />
-        {:else if t.id === 'social'}
-          <Megaphone size={16} />
-        {:else}
-          <Type size={16} />
+  <div class="flex items-center justify-between gap-2 bg-[var(--ink)] p-2 rounded-2xl max-md:hidden" role="tablist">
+    <!-- Pinned tools -->
+    <div class="flex items-center gap-1.5 overflow-x-auto flex-1">
+      {#each pinnedTools as pid}
+        {@const t = toolCatalog.find((x) => x.id === pid)!}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={brief.tool === t.id}
+          class={`flex items-center gap-2 py-2.5 px-3.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+            brief.tool === t.id
+              ? 'bg-[var(--lime)] text-[#253114] shadow-md'
+              : 'text-[var(--panel)] hover:bg-white/10'
+          }`}
+          onclick={() => selectTool(t.id)}
+        >
+          {#if t.id === 'tagline'}
+            <Sparkles size={16} />
+          {:else if t.id === 'rewrite'}
+            <PenLine size={16} />
+          {:else if t.id === 'summarize'}
+            <AlignLeft size={16} />
+          {:else if t.id === 'reply'}
+            <MessageCircle size={16} />
+          {:else if t.id === 'social'}
+            <Megaphone size={16} />
+          {:else}
+            <Type size={16} />
+          {/if}
+          <span>{t.name}</span>
+        </button>
+      {/each}
+
+      <!-- If current tool is outside the pinned tools, display active tool badge -->
+      {#if !pinnedTools.includes(brief.tool)}
+        {@const activeTool = toolCatalog.find((x) => x.id === brief.tool)}
+        {#if activeTool}
+          <div class="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-[var(--lime)] text-[#253114] text-sm font-bold shadow-md whitespace-nowrap">
+            <span class="w-2 h-2 rounded-full bg-[#253114] animate-pulse"></span>
+            <span>{activeTool.name}</span>
+            <span class="text-[11px] opacity-75 font-normal">({activeTool.category})</span>
+          </div>
         {/if}
-        <span>{t.name}</span>
-      </button>
-    {/each}
+      {/if}
+    </div>
+
+    <!-- Browse All 50 Tools Button -->
+    <button
+      type="button"
+      class="flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold text-[var(--panel)] bg-white/10 hover:bg-white/20 transition-all border border-white/15 flex-none"
+      onclick={() => (catalogOpen = true)}
+    >
+      <Search size={15} />
+      <span>All 50 Tools</span>
+      <span class="px-2 py-0.5 rounded-full bg-[var(--lime)] text-[#253114] text-xs font-black">50</span>
+    </button>
   </div>
 
   <!-- Mobile tool selector -->
   <div class="mobile-tool-picker md:hidden">
-    <label for="mobile-tool" class="text-xs font-bold tracking-wider uppercase mb-1">Select tool</label>
+    <div class="flex items-center justify-between gap-2 mb-1.5">
+      <label for="mobile-tool" class="text-xs font-bold tracking-wider uppercase">Select tool</label>
+      <button
+        type="button"
+        class="text-xs font-semibold text-[var(--primary)] underline flex items-center gap-1"
+        onclick={() => (catalogOpen = true)}
+      >
+        <Search size={12} /> Search all 50
+      </button>
+    </div>
     <select
       id="mobile-tool"
       value={brief.tool}
       onchange={(e) => selectTool((e.target as HTMLSelectElement).value as Tool)}
     >
-      {#each toolCatalog as t}
-        <option value={t.id}>{t.name} — {t.description}</option>
+      {#each toolCategories as cat}
+        <optgroup label={cat}>
+          {#each toolCatalog.filter((t) => t.category === cat) as t}
+            <option value={t.id}>{t.name} — {t.description}</option>
+          {/each}
+        </optgroup>
       {/each}
     </select>
   </div>
@@ -482,10 +553,126 @@
         <Sparkles size={16} /> Try another Quickie with this brief
       </button>
     {:else}
-      <StudioSample tool={brief.tool} ontry={() => loadSampleSample()} />
+      <StudioSample tool={brief.tool} ontry={loadSample} />
     {/if}
   </section>
 </div>
+
+<!-- All 50 Tools Modal -->
+{#if catalogOpen}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onclick={() => (catalogOpen = false)}>
+    <div
+      class="relative w-full max-w-[880px] max-h-[90vh] rounded-3xl bg-[var(--panel)] border border-[var(--border)] p-6 text-[var(--ink)] shadow-2xl flex flex-col"
+      onclick={(e) => e.stopPropagation()}
+    >
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+        <div>
+          <div class="flex items-center gap-2">
+            <Sparkles size={20} class="text-[var(--primary)]" />
+            <h2 class="text-xl font-extrabold tracking-tight">AI Micro-Tool Directory</h2>
+            <span class="px-2.5 py-0.5 rounded-full bg-[var(--lime)] text-[#253114] text-xs font-black">50 tools</span>
+          </div>
+          <p class="text-xs text-[var(--subtle)] mt-1">Every tool runs on 1 credit or unlimited with BYOK. Select any tool to switch instantly.</p>
+        </div>
+        <button type="button" class="icon-button" onclick={() => (catalogOpen = false)}>
+          <X size={20} />
+        </button>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="my-4 grid gap-3">
+        <div class="relative">
+          <Search size={18} class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--subtle)]" />
+          <input
+            type="search"
+            placeholder="Search 50 tools by name, description or keywords (e.g. regex, recipe, sql, bio)..."
+            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--page)] text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            bind:value={catalogQuery}
+          />
+        </div>
+
+        <!-- Category Pills -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold">
+          <button
+            type="button"
+            class={`px-3 py-1.5 rounded-full transition-all whitespace-nowrap ${
+              selectedCategory === 'All'
+                ? 'bg-[var(--ink)] text-[var(--panel)] shadow-sm'
+                : 'bg-[var(--muted)] text-[var(--ink)] hover:bg-[var(--border)]'
+            }`}
+            onclick={() => (selectedCategory = 'All')}
+          >
+            All (50)
+          </button>
+          {#each toolCategories as cat}
+            {@const count = toolCatalog.filter((t) => t.category === cat).length}
+            <button
+              type="button"
+              class={`px-3 py-1.5 rounded-full transition-all whitespace-nowrap ${
+                selectedCategory === cat
+                  ? 'bg-[var(--ink)] text-[var(--panel)] shadow-sm'
+                  : 'bg-[var(--muted)] text-[var(--ink)] hover:bg-[var(--border)]'
+              }`}
+              onclick={() => (selectedCategory = cat)}
+            >
+              {cat} ({count})
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <!-- Tools Grid -->
+      <div class="flex-1 overflow-y-auto pr-1 grid sm:grid-cols-2 gap-3 min-h-[300px]">
+        {#if filteredCatalog.length === 0}
+          <div class="col-span-2 py-16 text-center text-[var(--subtle)]">
+            <p class="font-bold text-base">No tools found matching "{catalogQuery}"</p>
+            <p class="text-xs mt-1">Try another keyword or select "All" categories.</p>
+          </div>
+        {:else}
+          {#each filteredCatalog as t (t.id)}
+            <button
+              type="button"
+              class={`group text-left p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                brief.tool === t.id
+                  ? 'border-[var(--lime)] bg-[var(--lime)]/10 ring-2 ring-[var(--lime)]'
+                  : 'border-[var(--border)] bg-[var(--page)] hover:border-[var(--primary)] hover:bg-[var(--muted)]/50'
+              }`}
+              onclick={() => {
+                selectTool(t.id);
+                catalogOpen = false;
+                toast.success(`Switched to ${t.name}`);
+              }}
+            >
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                  <span class="font-bold text-sm text-[var(--ink)] group-hover:text-[var(--primary)] transition-colors">
+                    {t.name}
+                  </span>
+                  <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[var(--muted)] text-[var(--subtle)]">
+                    {t.category}
+                  </span>
+                </div>
+                <p class="text-xs text-[var(--subtle)] line-clamp-2 leading-relaxed">
+                  {t.description}
+                </p>
+              </div>
+
+              <div class="mt-3 pt-2.5 border-t border-[var(--border)]/60 flex items-center justify-between text-xs">
+                <span class="text-[11px] text-[var(--subtle)] font-mono truncate max-w-[200px]">
+                  {t.example}
+                </span>
+                <span class={`font-bold shrink-0 ml-2 ${brief.tool === t.id ? 'text-[var(--primary)]' : 'text-[var(--subtle)] group-hover:text-[var(--ink)]'}`}>
+                  {brief.tool === t.id ? '✓ Selected' : 'Use tool →'}
+                </span>
+              </div>
+            </button>
+          {/each}
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}
 
 <!-- History Modal -->
 {#if historyOpen}
