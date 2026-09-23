@@ -63,7 +63,7 @@
       type="button"
       class={`px-3 py-1.5 rounded-full transition-all whitespace-nowrap ${
         currentCategory === 'All'
-          ? 'bg-[var(--ink)] text-[var(--panel)] shadow-sm'
+          ? 'bg-[var(--lime)] text-[#202613] font-bold shadow-sm'
           : 'bg-[var(--muted)] text-[var(--ink)] hover:bg-[var(--border)]'
       }`}
       onclick={() => (currentCategory = 'All')}
@@ -76,7 +76,7 @@
         type="button"
         class={`px-3 py-1.5 rounded-full transition-all whitespace-nowrap ${
           currentCategory === cat
-            ? 'bg-[var(--ink)] text-[var(--panel)] shadow-sm'
+            ? 'bg-[var(--lime)] text-[#202613] font-bold shadow-sm'
             : 'bg-[var(--muted)] text-[var(--ink)] hover:bg-[var(--border)]'
         }`}
         onclick={() => (currentCategory = cat)}

@@ -393,7 +393,7 @@
 <!-- Tool Nav Bar -->
 <div class="tool-nav">
   <!-- Desktop Nav -->
-  <div class="flex items-center justify-between gap-2 bg-[var(--ink)] p-2 rounded-2xl max-md:hidden" role="group" aria-label="Writing tools">
+  <div class="flex items-center justify-between gap-2 bg-[var(--tool-nav-bg)] p-2 rounded-2xl max-md:hidden border border-[var(--tool-nav-border)]" role="group" aria-label="Writing tools">
     <!-- Pinned tools (no ugly horizontal scrollbar) -->
     <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1">
       {#each pinnedTools as pid}
@@ -403,8 +403,8 @@
           aria-pressed={brief.tool === t.id}
           class={`flex items-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
             brief.tool === t.id
-              ? 'bg-[var(--lime)] text-[#253114] shadow-md'
-              : 'text-[var(--panel)] hover:bg-white/10'
+              ? 'bg-[var(--lime)] text-[#202613] shadow-md font-bold'
+              : 'text-white/85 hover:text-white hover:bg-white/10'
           }`}
           onclick={() => selectTool(t.id)}
           title={`${t.name} — ${t.description}`}
@@ -430,8 +430,8 @@
       {#if !pinnedTools.includes(brief.tool)}
         {@const activeTool = toolCatalog.find((x) => x.id === brief.tool)}
         {#if activeTool}
-          <div class="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-[var(--lime)] text-[#253114] text-sm font-bold shadow-md whitespace-nowrap">
-            <span class="w-2 h-2 rounded-full bg-[#253114] animate-pulse"></span>
+          <div class="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-[var(--lime)] text-[#202613] text-sm font-bold shadow-md whitespace-nowrap">
+            <span class="w-2 h-2 rounded-full bg-[#202613] animate-pulse"></span>
             <span>{activeTool.name}</span>
             <span class="text-[11px] opacity-75 font-normal">({activeTool.category})</span>
           </div>
@@ -442,12 +442,12 @@
     <!-- Browse All 50 Tools Button -->
     <button
       type="button"
-      class="flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold text-[var(--panel)] bg-white/10 hover:bg-white/20 transition-all border border-white/15 flex-none"
+      class="flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-white/10 hover:bg-white/20 transition-all border border-white/15 flex-none"
       onclick={() => (catalogOpen = true)}
     >
       <Search size={15} />
       <span>All 50 Tools</span>
-      <span class="px-2 py-0.5 rounded-full bg-[var(--lime)] text-[#253114] text-xs font-black">50</span>
+      <span class="px-2 py-0.5 rounded-full bg-[var(--lime)] text-[#202613] text-xs font-black">50</span>
     </button>
   </div>
 
@@ -456,12 +456,12 @@
     <!-- Active Tool Tap Card -->
     <button
       type="button"
-      class="w-full p-3 rounded-2xl bg-[var(--ink)] text-left flex items-center justify-between gap-3 shadow-lg border border-white/10 active:scale-[0.99] transition-all"
+      class="w-full p-3 rounded-2xl bg-[var(--tool-nav-bg)] text-left flex items-center justify-between gap-3 shadow-lg border border-[var(--tool-nav-border)] active:scale-[0.99] transition-all"
       onclick={() => (catalogOpen = true)}
       aria-label="Browse all 50 tools"
     >
       <div class="flex items-center gap-3 min-w-0">
-        <div class="w-10 h-10 rounded-xl bg-[var(--lime)] text-[#253114] flex items-center justify-center flex-none font-bold shadow-sm">
+        <div class="w-10 h-10 rounded-xl bg-[var(--lime)] text-[#202613] flex items-center justify-center flex-none font-bold shadow-sm">
           {#if brief.tool === 'tagline'}
             <Sparkles size={20} />
           {:else if brief.tool === 'rewrite'}
@@ -478,21 +478,21 @@
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-sm font-bold text-[var(--panel)] truncate">
+            <span class="text-sm font-bold text-white truncate">
               {currentToolMeta.name}
             </span>
             <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/15 text-[var(--lime)] uppercase tracking-wider">
               {currentToolMeta.category}
             </span>
           </div>
-          <p class="text-xs text-[var(--panel)]/70 truncate mt-0.5">
+          <p class="text-xs text-white/70 truncate mt-0.5">
             {currentToolMeta.description}
           </p>
         </div>
       </div>
 
       <!-- Action Pill -->
-      <div class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--lime)] text-[#253114] text-xs font-extrabold flex-none shadow-sm">
+      <div class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--lime)] text-[#202613] text-xs font-extrabold flex-none shadow-sm">
         <span>50 Tools</span>
         <ChevronDown size={14} />
       </div>
@@ -507,7 +507,7 @@
           aria-pressed={brief.tool === t.id}
           class={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             brief.tool === t.id
-              ? 'bg-[var(--ink)] text-[var(--lime)] ring-2 ring-[var(--lime)] shadow-sm'
+              ? 'bg-[var(--lime)] text-[#202613] shadow-md ring-2 ring-[var(--lime)]/50'
               : 'bg-[var(--panel)] text-[var(--ink)] border border-[var(--border)] hover:bg-[var(--muted)]'
           }`}
           onclick={() => selectTool(t.id)}
@@ -517,7 +517,7 @@
       {/each}
       <button
         type="button"
-        class="px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap bg-[var(--lime)] text-[#253114] shadow-sm flex items-center gap-1"
+        class="px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap bg-[var(--lime)] text-[#202613] shadow-sm flex items-center gap-1"
         onclick={() => (catalogOpen = true)}
       >
         <Search size={12} />
@@ -666,7 +666,7 @@
             type="button"
             class={`px-3 py-1.5 rounded-full transition-all whitespace-nowrap ${
               selectedCategory === 'All'
-                ? 'bg-[var(--ink)] text-[var(--panel)] shadow-sm'
+                ? 'bg-[var(--lime)] text-[#202613] font-bold shadow-sm'
                 : 'bg-[var(--muted)] text-[var(--ink)] hover:bg-[var(--border)]'
             }`}
             onclick={() => (selectedCategory = 'All')}
@@ -679,7 +679,7 @@
               type="button"
               class={`px-3 py-1.5 rounded-full transition-all whitespace-nowrap ${
                 selectedCategory === cat
-                  ? 'bg-[var(--ink)] text-[var(--panel)] shadow-sm'
+                  ? 'bg-[var(--lime)] text-[#202613] font-bold shadow-sm'
                   : 'bg-[var(--muted)] text-[var(--ink)] hover:bg-[var(--border)]'
               }`}
               onclick={() => (selectedCategory = cat)}

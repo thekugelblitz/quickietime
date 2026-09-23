@@ -158,7 +158,7 @@
 
   <div
     class="micro-task-disclaimer"
-    style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 14px; border-radius: 10px; background: var(--surface-muted, rgba(255,255,255,0.04)); border: 1px solid var(--border, rgba(255,255,255,0.1)); fontSize: 12px; color: var(--foreground-muted, #a1a1aa); line-height: 1.4;"
+    style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 14px; border-radius: 10px; background: var(--muted); border: 1px solid var(--border); font-size: 12px; color: var(--subtle); line-height: 1.4;"
     role="note"
   >
     <span style="font-size: 16px;">⚡</span>
