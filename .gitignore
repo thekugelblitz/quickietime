@@ -13,8 +13,9 @@
 # testing
 /coverage
 
-# next.js
+# next.js & astro
 /.next/
+/.astro/
 /.vinext/
 /out/
 

@@ -1,0 +1,18 @@
+---
+import Layout from '@/src/layouts/Layout.astro';
+import PublicShell from '@/src/components/PublicShell.astro';
+import AccountSettings from '@/src/components/AccountSettings.svelte';
+---
+
+<Layout
+  title="Account settings | QuickieTime"
+  description="Manage account details, export history, and session settings."
+  path="/account"
+  robots="noindex, nofollow"
+>
+  <PublicShell />
+  <main id="page-content" class="guide-page">
+    <h1>Your account</h1>
+    <AccountSettings client:load />
+  </main>
+</Layout>

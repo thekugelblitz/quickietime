@@ -1,0 +1,13 @@
+---
+import PublicPage from '@/src/components/PublicPage.astro';
+import Checkout from '@/src/components/Checkout.svelte';
+---
+
+<PublicPage
+  title="A little more creative fuel."
+  intro="Extra credits, on your terms."
+  path="/checkout"
+  metaTitle="Secure checkout — QuickieTime"
+>
+  <Checkout client:load />
+</PublicPage>

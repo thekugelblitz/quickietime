@@ -1,0 +1,16 @@
+---
+interface Props {
+  tool?: string;
+  title?: string;
+}
+
+const { tool = 'tagline', title = 'Put the idea to work.' } = Astro.props;
+---
+
+<aside class="studio-cta">
+  <div>
+    <h2>{title}</h2>
+    <p>Start with 5 guest credits. Edit, copy and download for free.</p>
+  </div>
+  <a class="primary-button" href={`/?tool=${tool}`}>Open the writing studio →</a>
+</aside>

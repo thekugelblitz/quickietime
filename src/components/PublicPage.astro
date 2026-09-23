@@ -1,0 +1,55 @@
+---
+import Layout from '@/src/layouts/Layout.astro';
+import PublicShell from './PublicShell.astro';
+import { breadcrumb } from '@/lib/page-seo';
+import { jsonLd } from '@/lib/site';
+
+interface Props {
+  title: string;
+  intro: string;
+  path: string;
+  eyebrow?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  schema?: any;
+}
+
+const {
+  title,
+  intro,
+  path,
+  eyebrow = 'SMALL EFFORT. BETTER WORDS.',
+  metaTitle,
+  metaDescription,
+  schema,
+} = Astro.props;
+
+const breadcrumbSchema = jsonLd(breadcrumb(title, path));
+const combinedSchema = schema
+  ? Array.isArray(schema)
+    ? [breadcrumbSchema, ...schema]
+    : [breadcrumbSchema, schema]
+  : [breadcrumbSchema];
+---
+
+<Layout
+  title={metaTitle || title}
+  description={metaDescription || intro}
+  path={path}
+  schema={combinedSchema}
+>
+  <PublicShell />
+  <main id="page-content" class="public-page">
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="/">QuickieTime</a>
+      <span>/</span>
+      <span aria-current="page">{title}</span>
+    </nav>
+    <header class="public-intro">
+      <span class="step-tag">{eyebrow}</span>
+      <h1>{title}</h1>
+      <p>{intro}</p>
+    </header>
+    <slot />
+  </main>
+</Layout>

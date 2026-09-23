@@ -1,0 +1,28 @@
+---
+import PublicPage from '@/src/components/PublicPage.astro';
+import StudioCTA from '@/src/components/StudioCTA.astro';
+import { useCases } from '@/lib/content';
+---
+
+<PublicPage
+  title="Real work. Fewer blank pages."
+  intro="Start with the job you need to finish, then choose the tool and the right amount of creative freedom."
+  path="/use-cases"
+  metaTitle="AI writing use cases"
+  metaDescription="Practical AI writing workflows for small businesses, customer support, content creators and everyday communication."
+>
+  <div class="public-card-grid">
+    {useCases.map((u) => (
+      <article class="public-card">
+        <h2>
+          <a href={`/use-cases/${u.slug}`}>{u.title}</a>
+        </h2>
+        <p>{u.description}</p>
+        <a class="text-link" href={`/use-cases/${u.slug}`}>
+          See the workflow →
+        </a>
+      </article>
+    ))}
+  </div>
+  <StudioCTA />
+</PublicPage>

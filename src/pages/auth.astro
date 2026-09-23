@@ -1,0 +1,20 @@
+---
+import Layout from '@/src/layouts/Layout.astro';
+import PublicShell from '@/src/components/PublicShell.astro';
+import AuthForm from '@/src/components/AuthForm.svelte';
+---
+
+<Layout
+  title="Sign in | QuickieTime"
+  description="Sign in for 20 daily credits, saved projects and your complete writing history."
+  path="/auth"
+  robots="noindex, nofollow"
+>
+  <PublicShell />
+  <main id="page-content" class="auth-page">
+    <span class="step-tag">YOUR CREATIVE CORNER</span>
+    <h1>Good work deserves a home.</h1>
+    <p>Sign in with Google or an email code for 20 daily credits, saved projects and your complete writing history.</p>
+    <AuthForm client:load />
+  </main>
+</Layout>

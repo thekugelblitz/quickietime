@@ -1,0 +1,88 @@
+---
+import PublicPage from '@/src/components/PublicPage.astro';
+import StudioCTA from '@/src/components/StudioCTA.astro';
+import { articles } from '@/lib/content';
+import { siteUrl, jsonLd } from '@/lib/site';
+
+export function getStaticPaths() {
+  return articles.map((a) => ({
+    params: { slug: a.slug },
+    props: { article: a },
+  }));
+}
+
+const { article: a } = Astro.props;
+const { slug } = Astro.params;
+
+const articleSchema = jsonLd({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: a.title,
+  description: a.description,
+  mainEntityOfPage: `${siteUrl}/guides/${slug}`,
+  author: { '@type': 'Organization', name: 'QuickieTime editorial', url: `${siteUrl}/about` },
+  publisher: { '@id': `${siteUrl}/#organization` },
+  inLanguage: 'en',
+});
+---
+
+<PublicPage
+  title={a.title}
+  intro={a.intro}
+  path={`/guides/${slug}`}
+  eyebrow={a.category}
+  metaTitle={a.title}
+  metaDescription={a.description}
+  schema={articleSchema}
+>
+  <div class="article-byline">By QuickieTime editorial · Practical product guidance</div>
+  <div class="article-layout">
+    <aside class="article-toc">
+      <strong>In this guide</strong>
+      {a.sections.map((s, i) => (
+        <a href={`#step-${i}`}>{s.heading}</a>
+      ))}
+      <a href="#review-checklist">Review checklist</a>
+      <a href={`/tools/${a.tool}`}>About the matching tool →</a>
+    </aside>
+    <article class="article-body">
+      {a.sections.map((s, i) => (
+        <section id={`step-${i}`}>
+          <h2>{s.heading}</h2>
+          {s.body.map((p) => (
+            <p>{p}</p>
+          ))}
+          {s.example && (
+            <div class="editorial-example">
+              <span>EXAMPLE BRIEF OR WORDING</span>
+              <p>{s.example}</p>
+            </div>
+          )}
+        </section>
+      ))}
+      <section id="review-checklist">
+        <h2>Before you use the output</h2>
+        <ul>
+          {a.checklist.map((x) => (
+            <li>{x}</li>
+          ))}
+        </ul>
+      </section>
+    </article>
+  </div>
+  <StudioCTA tool={a.tool} />
+  <section class="prose-section">
+    <h2>Keep exploring</h2>
+    <ul>
+      {articles
+        .filter((x) => x.slug !== slug)
+        .slice(0, 3)
+        .map((x) => (
+          <li>
+            <a href={`/guides/${x.slug}`}>{x.title}</a>
+          </li>
+        ))}
+    </ul>
+    <a href="/guides" class="text-link">All writing guides →</a>
+  </section>
+</PublicPage>

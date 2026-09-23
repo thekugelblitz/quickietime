@@ -5,25 +5,10 @@ import {tmpdir} from 'node:os';
 import {resolve,join} from 'node:path';
 import {randomBytes,createHmac} from 'node:crypto';
 import {DatabaseSync} from 'node:sqlite';
-const root=process.cwd(),standalone=resolve('.next/standalone'),temp=mkdtempSync(join(tmpdir(),'quickietime-smoke-'));
-assert(existsSync(join(standalone,'server.js')),'Run the production build first.');
-cpSync('public',join(standalone,'public'),{recursive:true});cpSync('.next/static',join(standalone,'.next/static'),{recursive:true});cpSync('drizzle',join(standalone,'drizzle'),{recursive:true});
-if(process.platform==='win32'){
-  const walk=(dir)=>{
-    if(!existsSync(dir))return;
-    for(const entry of readdirSync(dir,{withFileTypes:true})){
-      const full=join(dir,entry.name);
-      if(entry.isSymbolicLink()){
-        try{realpathSync(full)}catch{
-          try{const t=readlinkSync(full);unlinkSync(full);symlinkSync(t,full,'junction')}catch{}
-        }
-      }else if(entry.isDirectory()){walk(full)}
-    }
-  };
-  walk(join(standalone,'node_modules'));
-}
+const root=process.cwd(),serverFile=resolve('dist/server.mjs'),temp=mkdtempSync(join(tmpdir(),'quickietime-smoke-'));
+assert(existsSync(serverFile),'Run the production build first (pnpm build).');
 const origin=process.env.SMOKE_SITE_URL||'https://qtai.click',port=Number(process.env.SMOKE_PORT||3187),base=`http://127.0.0.1:${port}`,secret=randomBytes(32).toString('hex'),dbPath=join(temp,'db.sqlite');
-const child=spawn(process.execPath,['server.js'],{cwd:standalone,env:{...process.env,NODE_ENV:'production',HOSTNAME:'127.0.0.1',PORT:String(port),SITE_URL:origin,AUTH_SECRET:secret,SETTINGS_ENCRYPTION_KEY:'c'.repeat(64),ADMIN_SETUP_TOKEN:secret,DATABASE_PATH:dbPath,TRUST_PROXY:'true',OPENAI_API_KEY:'',CHEAPERINFERENCE_API_KEY:'',OPENROUTER_API_KEY:'',SMTP_HOST:''},stdio:['ignore','pipe','pipe']});
+const child=spawn(process.execPath,[serverFile],{cwd:root,env:{...process.env,NODE_ENV:'production',HOSTNAME:'127.0.0.1',PORT:String(port),SITE_URL:origin,AUTH_SECRET:secret,SETTINGS_ENCRYPTION_KEY:'c'.repeat(64),ADMIN_SETUP_TOKEN:secret,DATABASE_PATH:dbPath,TRUST_PROXY:'true',OPENAI_API_KEY:'',CHEAPERINFERENCE_API_KEY:'',OPENROUTER_API_KEY:'',SMTP_HOST:''},stdio:['ignore','pipe','pipe']});
 let log='';child.stdout.on('data',d=>{log+=d});child.stderr.on('data',d=>{log+=d});
 async function request(path,{body,method='GET',cookie,headers={}}={}){return fetch(base+path,{method,redirect:'manual',headers:{origin,...(body?{'content-type':'application/json'}:{}),...(cookie?{cookie}:{}),...headers},body:body?JSON.stringify(body):undefined})}
 try{

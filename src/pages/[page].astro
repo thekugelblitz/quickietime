@@ -1,0 +1,316 @@
+---
+import PublicPage from '@/src/components/PublicPage.astro';
+import StudioCTA from '@/src/components/StudioCTA.astro';
+import ExamplesCarousel from '@/src/components/ExamplesCarousel.svelte';
+import { toolCatalog } from '@/lib/config';
+import { faqItems } from '@/lib/content';
+import { sampleLines } from '@/lib/studio';
+import { jsonLd } from '@/lib/site';
+
+export function getStaticPaths() {
+  const pages = [
+    'how-it-works',
+    'faq',
+    'examples',
+    'about',
+    'contact',
+    'privacy',
+    'terms',
+    'cookies',
+    'refund-policy',
+    'responsible-ai',
+    'editorial-policy',
+  ];
+  return pages.map((page) => ({ params: { page } }));
+}
+
+const { page } = Astro.params;
+const operator = process.env.SITE_OPERATOR || 'HostingSpell LLP';
+const contactEmail = process.env.CONTACT_EMAIL || 'support@qtai.click';
+
+const pageMeta: Record<string, { title: string; metaTitle?: string; description: string }> = {
+  'how-it-works': {
+    title: 'How QuickieTime works',
+    metaTitle: 'How QuickieTime works | AI writing tools made clear',
+    description: 'Understand how QuickieTime handles briefs, outputs, daily allowances and optional accounts without hidden subscriptions.',
+  },
+  faq: {
+    title: 'Frequently asked questions',
+    metaTitle: 'QuickieTime FAQ | Credits, accounts, tools & privacy',
+    description: 'Clear answers about free daily credits, guest use, accounts, data retention, supported AI models and payment packs.',
+  },
+  examples: {
+    title: 'Real writing tasks, shown simply.',
+    metaTitle: 'QuickieTime examples | Taglines, rewrites, replies & more',
+    description: 'Before-and-after samples showing what each tool does with everyday messy inputs and practical constraints.',
+  },
+  about: {
+    title: 'Focus over feature clutter.',
+    metaTitle: 'About QuickieTime | Purpose-built AI writing tools',
+    description: 'QuickieTime gives people six focused writing tools for everyday work — without bloat, complex prompt chaining or recurring lock-in.',
+  },
+  contact: {
+    title: 'Reach out to the team.',
+    metaTitle: 'Contact QuickieTime | Support, questions & operator details',
+    description: 'Get help with an account, report an issue, or ask a question about QuickieTime and its self-hosted deployment.',
+  },
+  privacy: {
+    title: 'Privacy policy',
+    metaTitle: 'Privacy policy | QuickieTime',
+    description: 'How QuickieTime handles accounts, prompts, generated text, retention, backups and self-hosted server controls.',
+  },
+  terms: {
+    title: 'Terms of use',
+    metaTitle: 'Terms of use | QuickieTime',
+    description: 'QuickieTime service terms covering account access, acceptable use, free credits, AI limitations and responsibility for published output.',
+  },
+  cookies: {
+    title: 'Cookies & browser storage',
+    metaTitle: 'Cookies & browser storage | QuickieTime',
+    description: 'Understand QuickieTime’s session cookie, local guest history, theme preferences and temporary draft storage.',
+  },
+  'refund-policy': {
+    title: 'Refunds & credit delivery',
+    metaTitle: 'Refunds & credit delivery | QuickieTime',
+    description: 'How QuickieTime delivers purchased credits, handles payment problems and reviews refund requests.',
+  },
+  'responsible-ai': {
+    title: 'A useful draft needs a human.',
+    metaTitle: 'A useful draft needs a human. | QuickieTime',
+    description: 'QuickieTime’s approach to accuracy, privacy, responsible use and human review of AI-generated writing.',
+  },
+  'editorial-policy': {
+    title: 'Useful guidance, honestly presented.',
+    metaTitle: 'Useful guidance, honestly presented. | QuickieTime',
+    description: 'How QuickieTime creates writing guides and labels examples without fabricated reviews, usage claims or ranking promises.',
+  },
+};
+
+const current = pageMeta[page!] || {
+  title: 'QuickieTime',
+  description: 'AI writing tools for everyday work.',
+};
+
+const faqSchema = page === 'faq' ? jsonLd({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqItems.map(([name, text]) => ({
+    '@type': 'Question',
+    name,
+    acceptedAnswer: { '@type': 'Answer', text },
+  })),
+}) : undefined;
+
+const isWide = ['examples', 'faq', 'how-it-works'].includes(page!);
+---
+
+<PublicPage
+  title={current.title}
+  intro={current.description}
+  path={`/${page}`}
+  metaTitle={current.metaTitle || current.title}
+  metaDescription={current.description}
+  schema={faqSchema}
+>
+  <div class={`public-prose ${isWide ? 'wide-prose' : ''}`}>
+    {page === 'how-it-works' && (
+      <Fragment>
+        <div class="workflow-steps">
+          {[
+            ['Choose the job', 'Start with a tagline, rewrite, summary, reply, caption or headline. Each tool shows the controls that fit its output.'],
+            ['Bring the useful context', 'Describe the audience, purpose and facts that must stay accurate. For summaries and rewrites, paste the source text.'],
+            ['Generate, compare, refine', 'One AI request uses one credit. Compare the results and edit small changes yourself for free. AI transformations use another credit.'],
+            ['Keep the good work', 'Copy text, download it or save a favorite. Signed-in users can organize work into projects and save edited versions without overwriting the original.']
+          ].map(([h, p], i) => (
+            <section>
+              <span>0{i + 1}</span>
+              <div>
+                <h2>{h}</h2>
+                <p>{p}</p>
+              </div>
+            </section>
+          ))}
+        </div>
+        <h2>Know what the AI cannot do</h2>
+        <p>It cannot check your accounts, browse a URL, inspect server logs or publish content for you. Supply verified facts and review the result before relying on it.</p>
+        <a class="text-link" href="/faq">More questions answered →</a>
+      </Fragment>
+    )}
+
+    {page === 'faq' && (
+      <div class="public-faq">
+        {faqItems.map(([q, a]) => (
+          <details>
+            <summary>{q}</summary>
+            <p>{a}</p>
+          </details>
+        ))}
+      </div>
+    )}
+
+    {page === 'examples' && (
+      <Fragment>
+        <p>These examples were written for explanation. They are not customer testimonials, actual usage claims or promises of identical AI output.</p>
+        <ExamplesCarousel client:load />
+        <div class="example-grid">
+          {toolCatalog.map((t) => (
+            <article class="example-tile">
+              <span class="category-pill">{t.name}</span>
+              <h2>From raw material to a draft</h2>
+              <div>
+                <strong>Before</strong>
+                <p>{sampleLines[t.id].before}</p>
+              </div>
+              <div class="example-after">
+                <strong>Illustrative output</strong>
+                <p>{sampleLines[t.id].after}</p>
+              </div>
+              <p>{sampleLines[t.id].note}</p>
+              <a class="text-link" href={`/tools/${t.id}`}>Learn the controls →</a>
+              <a class="tool-use" href={`/?tool=${t.id}`}>Try this tool</a>
+            </article>
+          ))}
+        </div>
+      </Fragment>
+    )}
+
+    {page === 'about' && (
+      <Fragment>
+        <h2>Why QuickieTime exists</h2>
+        <p>A short writing task should not need a long setup. QuickieTime brings common jobs into one workspace: a brand line, a clearer paragraph, a summary, a useful reply, a caption or a headline.</p>
+        <h2>Built around the job</h2>
+        <p>We give a tagline an idea count and a short length. We give a summary a detail level and a source. We give a reply a channel and verified context. The point is to help you make a good choice without presenting every possible setting at once.</p>
+        <h2>You keep editorial control</h2>
+        <p>AI produces a first draft. You decide whether it is accurate, appropriate and worth using. Edit for free, compare alternatives and keep versions of the work that matters.</p>
+        <h2>How our public guides are written</h2>
+        <p>QuickieTime editorial publishes practical guidance about the tools and everyday writing. Examples are labeled as illustrative. We avoid invented customer stories, performance statistics and claims of guaranteed originality.</p>
+        <h2>Who operates the service</h2>
+        <p>This website is operated by {operator}. Questions about the product or your data can be raised through our <a href="/contact">contact page</a>.</p>
+        <a class="text-link" href="/how-it-works">See how it works →</a>
+      </Fragment>
+    )}
+
+    {page === 'contact' && (
+      <Fragment>
+        <h2>Product and account support</h2>
+        <p>Tell us which tool you used, what you expected and what happened. Include the approximate time and your browser/device. If you share a screenshot, remove confidential text and credentials first.</p>
+        {contactEmail ? (
+          <a class="primary-button" href={`mailto:${contactEmail}`}>{contactEmail}</a>
+        ) : (
+          <p>The site operator has not yet published a contact email.</p>
+        )}
+        <h2>Privacy and data requests</h2>
+        <p>Signed-in users can export or delete their account through <a href="/account">Account settings</a>. For questions about backups or other data, contact the operator using the email above.</p>
+        <h2>Before you write</h2>
+        <p>Check the <a href="/faq">FAQs</a> for credit resets, input limits and formatting behavior. Never email a password, sign-in code, API key or full payment information.</p>
+        <h2>Feedback is welcome</h2>
+        <p>If a control is confusing or an output misses the mark, describe the issue without including private customer data. We cannot promise a response time or a feature delivery date.</p>
+      </Fragment>
+    )}
+
+    {page === 'privacy' && (
+      <Fragment>
+        <p>Effective for this self-hosted release. Operator: {operator}. This policy describes the application as shipped; the operator must keep it accurate if providers, analytics or retention settings change.</p>
+        <h2>Information used to run the service</h2>
+        <p>We store your verified email address, account creation date, hashed session tokens, saved generations, favorites and project names. Daily quota records and temporary abuse-prevention records use hashed identifiers. The application does not deliberately log prompts, generated text, sign-in codes or raw network addresses.</p>
+        <h2>AI processing</h2>
+        <p>When you generate or transform text, the brief, relevant context and requested source output are sent to the AI service configured by the operator. For this deployment, the configured provider is the provider identified by the operator on request. That provider processes the request under its own policies. Avoid passwords, private keys, sensitive personal information and confidential material you are not authorized to share.</p>
+        <h2>Email and authentication</h2>
+        <p>A configured email delivery service sends a one-time sign-in code. Codes expire after ten minutes and are stored as keyed hashes. A verified email creates an account if one does not exist. Sessions last up to thirty days unless you sign out or delete the account.</p>
+        <h2>Browser-local information</h2>
+        <p>Guest history, favorites, theme preferences and the brief preserved for sign-in use browser storage. Working briefs also stay in the current tab’s session storage. Clearing browser storage removes those local copies. Guest work is not automatically uploaded to your account.</p>
+        <h2>Retention and deletion</h2>
+        <p>Saved account content remains until you delete individual items or your account. Account settings provides an export and permanent deletion from the live database. Expired authentication and abuse records are removed by the maintenance job. Infrastructure logs and backups are controlled by the operator; contact us for their current retention schedule. The supplied backup utility defaults to thirty days of local backup retention.</p>
+        <h2>Payments and administration</h2>
+        <p>Checkout is hosted by Stripe, PayPal or Razorpay. We store order references, purchase amounts, currencies, coupon claims and credit balances, but not your card or bank credentials. Authorized administrators can view saved generations for support and abuse review; these administrative views are audited. Operational metrics include generation counts, token usage or estimates, latency and calculated costs. Deleting an account removes saved writing and disconnects retained accounting records from the account.</p>
+        <h2>Cookies, analytics and sharing</h2>
+        <p>The application uses a necessary session cookie and local preferences. This release does not embed advertising trackers or a third-party analytics collector. Your generations are not published to a public gallery. Server administrators and the services needed to process AI requests and deliver email may access data necessary for their roles.</p>
+        <h2>Your choices</h2>
+        <p>Use the service as a guest, remove local browser data, export account work or delete your account. Send questions through <a href="/contact">Contact</a>. See <a href="/cookies">Cookies & storage</a> for the keys used by the application.</p>
+      </Fragment>
+    )}
+
+    {page === 'terms' && (
+      <Fragment>
+        <p>These terms apply to QuickieTime as operated by {operator}. By using the service, you agree to use it responsibly and follow these conditions.</p>
+        <h2>Your account and access</h2>
+        <p>Use an email address you control. Keep sign-in codes private and do not share an account to bypass usage limits. You are responsible for activity carried out through your account.</p>
+        <h2>Permitted use</h2>
+        <p>Submit only material you are authorized to process. Do not use the service for unlawful activity, harassment, impersonation, harmful deception, credential theft, spam or attempts to compromise the service. Do not circumvent quotas or automated abuse protections.</p>
+        <h2>Your content and AI output</h2>
+        <p>You retain your rights in material you submit. You permit the processing needed to generate and store the results you request. AI output may contain errors or resemble other output. You must check facts, rights, confidentiality and suitability before publishing or relying on it.</p>
+        <h2>Free allowances</h2>
+        <p>The current service provides limited daily credits as described on the <a href="/pricing">plans and limits page</a>. Optional credit packs are sold as one-time purchases. Prices, credits and currency are shown before checkout; coupons are validated by the server. Payments and refunds follow our refund policy. Availability, features and free allowances may change; the public information should be updated when they do.</p>
+        <h2>Service limitations</h2>
+        <p>The service is provided without a promise of uninterrupted availability, factual accuracy, originality, search rankings or a specific commercial outcome. Do not use a draft as a substitute for qualified advice or required human review. Nothing here removes rights that cannot lawfully be excluded.</p>
+        <h2>Ending use and questions</h2>
+        <p>You can stop using the service and delete your account through account settings. Access may be limited to protect the service or address abuse. Contact the operator through <a href="/contact">Contact</a> if you need help or clarification.</p>
+      </Fragment>
+    )}
+
+    {page === 'cookies' && (
+      <Fragment>
+        <h2>The necessary sign-in cookie</h2>
+        <p>The qt_session cookie contains a random session token. It is HttpOnly, SameSite=Lax and Secure on an HTTPS deployment. It expires after thirty days or is cleared when you sign out.</p>
+        <h2>Administrator session</h2>
+        <p>qt_admin is a separate necessary HttpOnly cookie for administrators. It uses SameSite=Strict, Secure over HTTPS and expires after twelve hours.</p>
+        <h2>Local storage</h2>
+        <p>qt-history and qt-favorites store guest work in your browser. qt-dark stores the appearance preference. qt-pending temporarily preserves your brief across sign-in and has an application-enforced one-day expiry.</p>
+        <h2>Session storage</h2>
+        <p>qt-studio-drafts retains briefs when switching tools in the same tab. qt-continue and qt-reuse help move a selected saved task back into the studio and are consumed when restored.</p>
+        <h2>Managing storage</h2>
+        <p>You can remove these through your browser’s site-data settings. Doing so deletes guest work on that device and may sign you out; export anything you want to keep first. Account data is managed separately through <a href="/account">Account settings</a>.</p>
+        <h2>No advertising cookies in this release</h2>
+        <p>The shipped application does not add advertising cookies or send analytics to an external collector. If the operator adds those services, this page and any consent controls must be updated.</p>
+      </Fragment>
+    )}
+
+    {page === 'refund-policy' && (
+      <Fragment>
+        <h2>Instant credits, after verification</h2>
+        <p>Credit packs are one-time purchases. We add credits after the payment provider confirms the correct amount and currency. If a payment is pending, use Verify payment on your order page. Do not pay again just because the return page loads slowly.</p>
+        <h2>Payment problems</h2>
+        <p>If you were charged but did not receive credits, contact us with your order ID, payment provider and date. Never send card numbers, passwords or bank credentials. We investigate duplicate charges and failed delivery.</p>
+        <h2>Requesting a refund</h2>
+        <p>Contact the operator through the contact page. Include your order reference and reason. Requests are reviewed individually, including whether credits have been used and any applicable consumer rights. This page does not waive mandatory statutory rights or promise a specific refund decision or processing time.</p>
+        <h2>What happens to credits</h2>
+        <p>Approved refunds are issued through the original payment provider. Corresponding purchased credits are removed. If already used, a negative purchased-credit balance may remain until adjusted or covered by a future purchase; free daily allowances remain separate.</p>
+        <h2>No recurring billing</h2>
+        <p>Credit packs do not renew automatically and purchased credits do not expire. Checkout shows the final provider total before payment.</p>
+        <a href="/contact">Contact support →</a>
+      </Fragment>
+    )}
+
+    {page === 'responsible-ai' && (
+      <Fragment>
+        <h2>Review before you publish</h2>
+        <p>AI can misunderstand context, repeat familiar language or invent details. Check names, dates, prices and commitments. For customer support, supply only actions you have actually verified.</p>
+        <h2>Keep sensitive material out</h2>
+        <p>Do not paste credentials, private keys, payment details or personal information you are not authorized to process. An AI generation sends the brief to the configured provider.</p>
+        <h2>Use the right tool</h2>
+        <p>Summaries should stay faithful to source text. Rewrites should preserve meaning. Creative taglines may explore alternatives but cannot guarantee trademark clearance or originality.</p>
+        <h2>Report concerns</h2>
+        <p>Contact support about harmful output or misuse. Include only the minimum non-sensitive context needed to understand the issue.</p>
+        <a href="/contact">Report a concern →</a>
+      </Fragment>
+    )}
+
+    {page === 'editorial-policy' && (
+      <Fragment>
+        <h2>What our guides cover</h2>
+        <p>Our editorial pages explain common writing tasks, practical constraints and examples. They are written to help people make better choices with the available tools.</p>
+        <h2>Examples are illustrations</h2>
+        <p>Before-and-after examples are labeled and are not customer testimonials. Actual AI output varies with the brief, model and settings.</p>
+        <h2>Corrections and updates</h2>
+        <p>We update guidance when product behavior changes. If a limit, example or explanation is wrong, contact us with the page URL and the correction you suggest.</p>
+        <h2>Discovery without promises</h2>
+        <p>Pages are accessible to search engines and compatible AI crawlers. No markup, text file or submission guarantees indexing, ranking or citation.</p>
+        <a href="/guides">Explore writing guides →</a>
+      </Fragment>
+    )}
+  </div>
+
+  {['how-it-works', 'about', 'examples', 'faq'].includes(page!) && (
+    <StudioCTA />
+  )}
+</PublicPage>

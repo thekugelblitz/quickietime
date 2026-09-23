@@ -1,0 +1,13 @@
+---
+import PublicPage from '@/src/components/PublicPage.astro';
+import BillingHistory from '@/src/components/BillingHistory.svelte';
+---
+
+<PublicPage
+  title="Your purchases, together."
+  intro="View credit packs and verified payment status."
+  path="/billing"
+  metaTitle="Billing history — QuickieTime"
+>
+  <BillingHistory client:load />
+</PublicPage>

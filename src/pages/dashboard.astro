@@ -1,0 +1,14 @@
+---
+import Layout from '@/src/layouts/Layout.astro';
+import Dashboard from '@/src/components/Dashboard.svelte';
+---
+
+<Layout
+  title="Your dashboard — QuickieTime"
+  description="Manage saved generations, projects, and BYOK credentials."
+  path="/dashboard"
+  robots="noindex, nofollow"
+  showFooter={false}
+>
+  <Dashboard client:only="svelte" />
+</Layout>

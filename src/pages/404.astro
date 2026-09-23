@@ -1,0 +1,23 @@
+---
+import Layout from '@/src/layouts/Layout.astro';
+import PublicShell from '@/src/components/PublicShell.astro';
+---
+
+<Layout
+  title="Page not found — QuickieTime"
+  description="The page you requested could not be found."
+  path="/404"
+  robots="noindex, nofollow"
+>
+  <PublicShell />
+  <main id="page-content" class="public-page" style="text-align: center; padding: 80px 20px;">
+    <span class="step-tag">ERROR 404</span>
+    <h1 style="font-size: 48px; margin: 20px 0;">Page not found</h1>
+    <p style="font-size: 18px; color: var(--subtle); max-width: 500px; margin: 0 auto 30px;">
+      The words you’re looking for seem to have gone missing or moved.
+    </p>
+    <a class="primary-button" href="/" style="display: inline-flex; width: auto; padding: 14px 28px;">
+      Back to the writing studio →
+    </a>
+  </main>
+</Layout>

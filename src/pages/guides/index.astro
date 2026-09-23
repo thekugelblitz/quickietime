@@ -1,0 +1,28 @@
+---
+import PublicPage from '@/src/components/PublicPage.astro';
+import { articles } from '@/lib/content';
+---
+
+<PublicPage
+  title="Better briefs. Better first drafts."
+  intro="Practical writing advice, concrete examples and the checks that matter before you press publish."
+  path="/guides"
+  eyebrow="THE QUICKIETIME FIELD NOTES"
+  metaTitle="Practical AI writing guides"
+  metaDescription="Learn how to write taglines, rewrite accurately, summarize notes, draft customer replies and format text for Markdown or WhatsApp."
+>
+  <div class="public-card-grid">
+    {articles.map((a) => (
+      <article class="public-card">
+        <span class="category-pill">{a.category}</span>
+        <h2>
+          <a href={`/guides/${a.slug}`}>{a.title}</a>
+        </h2>
+        <p>{a.description}</p>
+        <a class="text-link" href={`/guides/${a.slug}`}>
+          Read the guide →
+        </a>
+      </article>
+    ))}
+  </div>
+</PublicPage>

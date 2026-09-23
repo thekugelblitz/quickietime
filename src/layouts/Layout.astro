@@ -1,0 +1,159 @@
+---
+import '@/src/styles/globals.css';
+import { siteUrl, operator, jsonLd } from '@/lib/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  path?: string;
+  schema?: any;
+  showFooter?: boolean;
+  robots?: string;
+}
+
+const {
+  title = 'QuickieTime — Fast AI Writing Micro-Tools | No Chat, BYOK Unlimited',
+  description = 'Fast AI writing micro-tools for quick tasks. Skip tedious chat prompts: instant taglines, paragraph rewrites, summaries, social captions, and email replies. Dual-engine: free daily credits or Bring Your Own Key (BYOK) for 100% free unlimited generation. Stored library and WordPress Hello Dolly embed widget.',
+  path = '/',
+  schema,
+  showFooter = true,
+  robots = process.env.SITE_INDEXABLE !== 'false' && !siteUrl.includes('localhost') ? 'index, follow, max-image-preview:large, max-snippet:-1' : 'noindex, nofollow',
+} = Astro.props;
+
+const canonicalUrl = `${siteUrl}${path === '/' ? '' : path}`;
+const pageTitle = title.includes('QuickieTime') ? title : `${title} — QuickieTime`;
+
+const orgSchema = jsonLd({
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  '@id': `${siteUrl}/#organization`,
+  name: operator,
+  url: siteUrl,
+});
+
+const websiteSchema = jsonLd({
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${siteUrl}/#website`,
+  name: 'QuickieTime',
+  url: `${siteUrl}/`,
+  inLanguage: 'en',
+});
+
+const appSchema = jsonLd({
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  '@id': `${siteUrl}/#app`,
+  name: 'QuickieTime',
+  url: siteUrl,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web browser',
+  description,
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+    description: 'Limited free daily credits or unlimited with BYOK',
+  },
+  featureList: [
+    'Tagline generator',
+    'Paragraph rewriter',
+    'Text summarizer',
+    'Reply writer',
+    'Social captions',
+    'Headlines and subject lines',
+    'BYOK API Key Support',
+    'WordPress Hello Dolly Embed Widget',
+    'CSV/JSON/TXT Data Export',
+  ],
+});
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="robots" content={robots} />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- OpenGraph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="QuickieTime" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+
+    <!-- Prevent theme flash -->
+    <script is:inline>
+      (function () {
+        try {
+          var d = localStorage.getItem('qt-dark');
+          if (d === 'true' || (d === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <!-- Schema Structured Data -->
+    <script type="application/ld+json" set:html={orgSchema} />
+    <script type="application/ld+json" set:html={websiteSchema} />
+    <script type="application/ld+json" set:html={appSchema} />
+    {schema && (
+      Array.isArray(schema) ? (
+        schema.map((s) => <script type="application/ld+json" set:html={typeof s === 'string' ? s : JSON.stringify(s)} />)
+      ) : (
+        <script type="application/ld+json" set:html={typeof schema === 'string' ? schema : JSON.stringify(schema)} />
+      )
+    )}
+  </head>
+  <body>
+    <a class="skip-link" href="#page-content">Skip to content</a>
+    <slot />
+
+    {showFooter && (
+      <footer class="public-footer">
+        <div>
+          <a class="brand" href="/">ϟ QuickieTime</a>
+          <p>Small effort. Better words.</p>
+          <span>AI writing tools for work with a little personality.</span>
+        </div>
+        <div>
+          <strong>Make something</strong>
+          <a href="/">Writing studio</a>
+          <a href="/tools">All tools</a>
+          <a href="/examples">Examples</a>
+          <a href="/pricing">Plans & limits</a>
+        </div>
+        <div>
+          <strong>Get better at it</strong>
+          <a href="/guides">Writing guides</a>
+          <a href="/use-cases">Use cases</a>
+          <a href="/how-it-works">How it works</a>
+          <a href="/faq">FAQs</a>
+        </div>
+        <div>
+          <strong>Know the details</strong>
+          <a href="/about">About</a>
+          <a href="/contact">Contact</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="/cookies">Cookies & storage</a>
+          <a href="/refund-policy">Refund policy</a>
+          <a href="/responsible-ai">Responsible AI</a>
+          <a href="/editorial-policy">Editorial policy</a>
+        </div>
+        <p class="footer-note">© {new Date().getFullYear()} QuickieTime. Review AI output before using it.</p>
+      </footer>
+    )}
+  </body>
+</html>

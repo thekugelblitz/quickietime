@@ -1,0 +1,14 @@
+---
+import Layout from '@/src/layouts/Layout.astro';
+import AdminStation from '@/src/components/AdminStation.svelte';
+---
+
+<Layout
+  title="Control station — QuickieTime"
+  description="A separate, protected space to run QuickieTime."
+  path="/bhai"
+  robots="noindex, nofollow"
+>
+  <!-- ADMIN_SERVER_DATA -->
+  <AdminStation client:only="svelte" />
+</Layout>

@@ -1,0 +1,38 @@
+---
+import ThemeToggle from './ThemeToggle.svelte';
+import MobileIsland from './MobileIsland.svelte';
+
+export const publicLinks = [
+  ['/tools', 'Tools'],
+  ['/guides', 'Writing guides'],
+  ['/use-cases', 'Use cases'],
+  ['/examples', 'Examples'],
+  ['/pricing', 'Plans & credits'],
+  ['/faq', 'FAQs'],
+];
+---
+
+<header class="site-header">
+  <a class="brand" href="/">
+    <span class="brand-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    </span>
+    QuickieTime
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="/about">About</a>
+    <a href="/dashboard">Dashboard</a>
+    <ThemeToggle client:load />
+    <a class="signin" href="/auth">Free Account ↗</a>
+  </nav>
+</header>
+
+<nav class="explore-nav" aria-label="Explore QuickieTime">
+  {publicLinks.map(([url, label]) => (
+    <a href={url}>{label}</a>
+  ))}
+</nav>
+
+<MobileIsland client:load />

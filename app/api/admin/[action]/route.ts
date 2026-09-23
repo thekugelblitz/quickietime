@@ -31,7 +31,7 @@ export async function GET(r:Request,{params}:{params:Promise<{action:string}>}){
   try{
     const {action}=await params;
     const d=sqlite();
-    if(action==='session')return reply({admin:adminUser(r),setup:!d.prepare('SELECT 1 FROM admin_accounts LIMIT 1').get()});
+    if(action==='session')return reply({admin:adminUser(r),setup:!d.prepare("SELECT 1 FROM admin_accounts WHERE id!='bhai-admin' AND email NOT IN ('bhai','bhai@qtai.click') LIMIT 1").get()});
     const a=adminUser(r);
     if(!a)return failure('UNAUTHORIZED','Administrator sign-in required.',401);
     const u=new URL(r.url),page=Math.max(0,Math.min(10000,Number(u.searchParams.get('page'))||0)),q=(u.searchParams.get('q')||'').slice(0,200);const offset=page*25;
@@ -63,7 +63,7 @@ export async function POST(r:Request,{params}:{params:Promise<{action:string}>})
         if(!token||token.length<8||!equal(v.token||'',token))return failure('UNAUTHORIZED','Invalid setup token.',401);
         d.exec('BEGIN IMMEDIATE');
         try{
-          if(d.prepare('SELECT 1 FROM admin_accounts LIMIT 1').get())throw new Error('Setup has already been completed.');
+          if(d.prepare("SELECT 1 FROM admin_accounts WHERE id!='bhai-admin' AND email NOT IN ('bhai','bhai@qtai.click') LIMIT 1").get())throw new Error('Setup has already been completed.');
           const id=crypto.randomUUID();
           d.prepare('INSERT INTO admin_accounts VALUES (?,?,?,?)').run(id,v.email,passwordHash(v.password),new Date().toISOString());
           audit(id,'admin_setup',v.email);
