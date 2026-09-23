@@ -810,10 +810,10 @@
           <div class="grid gap-3">
             {#each favorites as fav (fav.id)}
               <div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--page)] flex items-center justify-between gap-4">
-                <p class="font-medium text-base">{fav.text}</p>
+                <p class="font-medium text-base min-w-0 flex-1 break-words">{fav.text}</p>
                 <button
                   type="button"
-                  class="primary-button text-xs py-2 px-3 flex-none"
+                  class="primary-button text-xs py-2 px-3 flex-none inline-flex items-center gap-1.5 font-bold shadow-sm"
                   onclick={() => {
                     copyText(fav.text);
                     toast.success('Favorite copied!');
@@ -904,7 +904,7 @@
           >
             Cancel
           </button>
-          <button type="submit" class="primary-button text-sm py-2.5 px-5">
+          <button type="submit" class="primary-button text-sm py-2.5 px-5 flex-none inline-flex items-center">
             Save & Activate BYOK
           </button>
         </div>

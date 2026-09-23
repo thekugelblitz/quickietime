@@ -1,6 +1,7 @@
 ---
 import ThemeToggle from './ThemeToggle.svelte';
 import MobileIsland from './MobileIsland.svelte';
+import CommandPalette from './CommandPalette.svelte';
 
 export const publicLinks = [
   ['/tools', 'Tools'],
@@ -22,12 +23,28 @@ export const publicLinks = [
     QuickieTime
   </a>
   <nav aria-label="Main navigation">
+    <button
+      type="button"
+      id="command-palette-trigger"
+      class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--muted)] text-[var(--subtle)] hover:text-[var(--ink)] hover:border-[#a6c64d] text-xs font-medium transition-all"
+      onclick="window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))"
+      title="Search 50 tools and commands (Ctrl+K or ⌘K)"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.3-4.3"></path>
+      </svg>
+      <span>Search tools…</span>
+      <kbd class="px-1.5 py-0.5 rounded bg-[var(--panel)] border border-[var(--border)] font-mono text-[10px]">⌘K</kbd>
+    </button>
     <a href="/about">About</a>
     <a href="/dashboard">Dashboard</a>
     <ThemeToggle client:load />
     <a class="signin" href="/auth">Free Account <span aria-hidden="true">↗</span></a>
   </nav>
 </header>
+
+<CommandPalette client:idle />
 
 <nav class="explore-nav" aria-label="Explore QuickieTime">
   {publicLinks.map(([url, label]) => (

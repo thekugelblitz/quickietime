@@ -273,7 +273,7 @@
       {#if error}
         <p role="alert" class="error">{error}</p>
       {/if}
-      <button type="submit" class="primary-button" disabled={busy}>
+      <button type="submit" class="primary-button w-full justify-center" disabled={busy}>
         {busy ? 'Checking…' : 'Sign in securely'}
       </button>
     </form>
@@ -487,7 +487,7 @@
               </fieldset>
             {/each}
           </div>
-          <button class="primary-button" disabled={busy || !Object.keys(changes).length}>
+          <button class="primary-button inline-flex items-center" disabled={busy || !Object.keys(changes).length}>
             Save settings
           </button>
           <p class="setting-hint">
@@ -507,10 +507,10 @@
             </label>
           {/if}
           {#if section === 'plans'}
-            <button class="primary-button" onclick={() => openModal('plans')}>Create credit pack</button>
+            <button class="primary-button flex-none inline-flex items-center" onclick={() => openModal('plans')}>Create credit pack</button>
           {/if}
           {#if section === 'coupons'}
-            <button class="primary-button" onclick={() => openModal('coupons')}>Create coupon</button>
+            <button class="primary-button flex-none inline-flex items-center" onclick={() => openModal('coupons')}>Create coupon</button>
           {/if}
           <button onclick={() => void loadData()}>Refresh</button>
         </div>
@@ -875,7 +875,7 @@
           <p>All admin sessions will be signed out.</p>
         {/if}
 
-        <button class="primary-button mt-4" disabled={busy}>
+        <button class="primary-button mt-4 w-full justify-center" disabled={busy}>
           {busy ? 'Saving…' : 'Save changes'}
         </button>
       </form>

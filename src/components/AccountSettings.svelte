@@ -29,7 +29,7 @@
 
 <h2>Export your work</h2>
 <p>Download your account details, complete history, favorites and projects as JSON.</p>
-<a class="primary-button" href="/api/export?format=json" download>
+<a class="primary-button inline-flex items-center" href="/api/export?format=json" download>
   Download account export
 </a>
 

@@ -94,7 +94,7 @@
   <p role="status" class="admin-notice" style="margin-bottom: 16px;">{notice}</p>
 {/if}
 
-<a class="primary-button" href="/pricing">Get more credits</a>
+<a class="primary-button inline-flex items-center" href="/pricing">Get more credits</a>
 
 {#if subscriptions.length > 0}
   <div style="margin-top: 30px;">

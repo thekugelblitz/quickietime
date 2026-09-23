@@ -97,7 +97,7 @@
     <h2>Keep your credits in your account.</h2>
     <p>Sign in before purchasing so your credits reach the right place.</p>
     <a
-      class="primary-button"
+      class="primary-button w-full justify-center"
       href={`/auth?return_to=${encodeURIComponent('/checkout?' + (orderId ? 'order=' + orderId : 'plan=' + planId))}`}
     >
       Sign in to continue
@@ -114,13 +114,13 @@
     <p>{order?.plan_name} · {order ? money(order.amount, order.currency) : orderId}</p>
     {#if order?.status === 'paid'}
       <p>{order.credits} credits have been activated for your account.</p>
-      <a class="primary-button" href="/">Start creating →</a>
+      <a class="primary-button w-full justify-center" href="/">Start creating →</a>
     {:else}
       <p>Returning here checks the payment confirmation status directly with your provider.</p>
       {#if error}
         <p role="alert" class="error">{error}</p>
       {/if}
-      <button type="button" class="primary-button" disabled={busy} onclick={verify}>
+      <button type="button" class="primary-button w-full justify-center" disabled={busy} onclick={verify}>
         {busy ? 'Verifying payment…' : 'Verify payment now'}
       </button>
     {/if}
@@ -164,7 +164,7 @@
       <p role="alert" class="error">{error}</p>
     {/if}
 
-    <button type="button" class="primary-button" disabled={busy} onclick={pay}>
+    <button type="button" class="primary-button w-full justify-center" disabled={busy} onclick={pay}>
       {busy ? 'Connecting to payment provider…' : `Pay ${money(pack.amount, pack.currency)}`}
     </button>
   {:else}

@@ -49,6 +49,16 @@
     }
   }
 
+  function randomizeSpark() {
+    const list = starters[brief.tool];
+    if (!list || list.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * list.length);
+    loadSample(randomIndex);
+  }
+
+  const limit = $derived(inputLimit(brief.tool, authenticated));
+  const limitRatio = $derived(brief.idea.length / (limit || 1));
+
   const card = $derived(['tagline', 'headlines'].includes(brief.tool));
   const cap = $derived(authenticated ? 700 : 300);
 
@@ -183,8 +193,43 @@
       ></textarea>
 
       <div class="input-meta">
-        <span class="starter-caption">Need a spark?</span>
-        <span>{brief.idea.length.toLocaleString()} / {inputLimit(brief.tool, authenticated).toLocaleString()}</span>
+        <div class="flex items-center gap-2">
+          <span class="starter-caption">Need a spark?</span>
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-[var(--lime)] text-[#202613] font-bold hover:opacity-90 transition-all shadow-xs"
+            onclick={randomizeSpark}
+            title="Load a random creative prompt"
+          >
+            <Sparkles size={11} /> Surprise me
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          {#if brief.idea.length > 0}
+            <button
+              type="button"
+              class="text-xs text-[var(--subtle)] hover:text-red-500 transition-colors"
+              onclick={() => (brief.idea = '')}
+              title="Clear input text"
+            >
+              Clear
+            </button>
+            <span class="text-[var(--border)]">·</span>
+          {/if}
+          <span class={limitRatio > 0.9 ? 'text-red-500 font-bold' : limitRatio > 0.75 ? 'text-amber-500 font-semibold' : ''}>
+            {brief.idea.length.toLocaleString()} / {limit.toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      <!-- Real-time typing progress bar -->
+      <div class="w-full h-1 bg-[var(--border)]/40 rounded-full overflow-hidden mt-1 mb-3">
+        <div
+          class={`h-full transition-all duration-150 ${
+            limitRatio > 0.9 ? 'bg-red-500' : limitRatio > 0.75 ? 'bg-amber-400' : 'bg-[var(--lime)]'
+          }`}
+          style={`width: ${Math.min(100, limitRatio * 100)}%;`}
+        ></div>
       </div>
 
       <div class="starter-chips">
@@ -391,8 +436,48 @@
         <div class="chaos-field">
           <div class="field-title">
             <h3>Creative freedom</h3>
-            <span>{brief.chaos <= 3 ? 'Grounded' : brief.chaos <= 6 ? 'Playful' : 'Adventurous'}</span>
+            <span class="text-xs px-2 py-0.5 rounded-md font-bold bg-[var(--muted)] text-[var(--ink)]">
+              {brief.chaos <= 3 ? '🎯 Level ' + brief.chaos + ' · Grounded & Precise' : brief.chaos <= 6 ? '✨ Level ' + brief.chaos + ' · Balanced Creative' : '🚀 Level ' + brief.chaos + ' · Bold Maverick'}
+            </span>
           </div>
+
+          <!-- Quick Preset Buttons -->
+          <div class="flex gap-2 my-2">
+            <button
+              type="button"
+              class={`text-xs py-1 px-2.5 rounded-lg border transition-all ${
+                brief.chaos <= 3
+                  ? 'bg-[var(--lime)] text-[#202613] font-bold border-[#a6c64d] shadow-xs'
+                  : 'bg-[var(--page)] border-[var(--border)] text-[var(--subtle)] hover:text-[var(--ink)]'
+              }`}
+              onclick={() => (brief.chaos = 2)}
+            >
+              Grounded (2)
+            </button>
+            <button
+              type="button"
+              class={`text-xs py-1 px-2.5 rounded-lg border transition-all ${
+                brief.chaos > 3 && brief.chaos <= 6
+                  ? 'bg-[var(--lime)] text-[#202613] font-bold border-[#a6c64d] shadow-xs'
+                  : 'bg-[var(--page)] border-[var(--border)] text-[var(--subtle)] hover:text-[var(--ink)]'
+              }`}
+              onclick={() => (brief.chaos = 5)}
+            >
+              Balanced (5)
+            </button>
+            <button
+              type="button"
+              class={`text-xs py-1 px-2.5 rounded-lg border transition-all ${
+                brief.chaos > 6
+                  ? 'bg-[var(--lime)] text-[#202613] font-bold border-[#a6c64d] shadow-xs'
+                  : 'bg-[var(--page)] border-[var(--border)] text-[var(--subtle)] hover:text-[var(--ink)]'
+              }`}
+              onclick={() => (brief.chaos = 8)}
+            >
+              Bold (8)
+            </button>
+          </div>
+
           <input
             type="range"
             min="1"

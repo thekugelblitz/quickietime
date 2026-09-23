@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Copy, Heart, MoreHorizontal } from 'lucide-svelte';
+  import { Copy, Heart, MoreHorizontal, Check } from 'lucide-svelte';
   import { type Result, type Brief, allowedActions, isDocument, wordCount } from '@/lib/config';
   import FormattedText from './FormattedText.svelte';
   import { convertFormat } from '@/components/formatted-text';
@@ -42,9 +42,13 @@
   const document = $derived(isDocument(brief.tool));
   const dirty = $derived(text !== result.text || format !== brief.format);
 
+  let copied = $state(false);
+
   async function copy() {
     try {
       await copyText(text);
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
       toast.success('Copied. Formatting preserved.');
     } catch {
       toast.error('Select the output to copy it.');
@@ -86,8 +90,18 @@
   <div class="result-top">
     <span class="result-number">{document ? 'YOUR DRAFT' : String(index + 1).padStart(2, '0')}</span>
     <div style="display: flex; gap: 3px; align-items: center; position: relative;">
-      <button type="button" class="icon-button" aria-label="Copy output" onclick={copy}>
-        <Copy size={18} />
+      <button
+        type="button"
+        class={`icon-button transition-all ${copied ? 'text-green-600 bg-green-500/15' : ''}`}
+        aria-label="Copy output"
+        onclick={copy}
+        title={copied ? 'Copied!' : 'Copy to clipboard'}
+      >
+        {#if copied}
+          <Check size={18} class="text-green-500" />
+        {:else}
+          <Copy size={18} />
+        {/if}
       </button>
       <button
         type="button"
@@ -203,8 +217,14 @@
         </select>
       </label>
     {/if}
-    <button type="button" onclick={copy}>
-      Copy {format === 'plain' ? 'text' : 'formatted text'}
+    <button type="button" class="inline-flex items-center gap-1.5" onclick={copy}>
+      {#if copied}
+        <Check size={14} class="text-green-500" />
+        <span class="text-green-600 font-semibold">Copied!</span>
+      {:else}
+        <Copy size={14} />
+        <span>Copy {format === 'plain' ? 'text' : 'formatted text'}</span>
+      {/if}
     </button>
     {#if dirty}
       <button type="button" disabled={saving || !text.trim()} onclick={save}>

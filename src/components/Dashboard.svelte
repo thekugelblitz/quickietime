@@ -12,10 +12,14 @@
     Copy,
     ArrowUpRight,
     LogOut,
+    Check,
+    Search,
+    Sparkles,
   } from 'lucide-svelte';
   import ThemeToggle from './ThemeToggle.svelte';
   import MobileIsland from './MobileIsland.svelte';
   import Toaster from './Toaster.svelte';
+  import CommandPalette from './CommandPalette.svelte';
   import { toast } from '@/src/lib/toast.svelte';
   import { toolCatalog, type Entry, type Result } from '@/lib/config';
   import { copyText } from '@/lib/clipboard';
@@ -32,6 +36,31 @@
   let tool = $state('all');
   let project = $state('all');
   let view = $state<'history' | 'favorites' | 'projects' | 'byok'>('history');
+  let commandPaletteOpen = $state(false);
+  let copiedFavId = $state<string | null>(null);
+  let favQuery = $state('');
+
+  const filteredFavorites = $derived.by(() => {
+    const q = favQuery.trim().toLowerCase();
+    if (!q) return favorites;
+    return favorites.filter((f) => f.text.toLowerCase().includes(q));
+  });
+
+  async function copyFavorite(id: string, text: string) {
+    await copyText(text);
+    copiedFavId = id;
+    setTimeout(() => {
+      if (copiedFavId === id) copiedFavId = null;
+    }, 2000);
+    toast.success('Copied to clipboard!');
+  }
+
+  async function copyAllFavorites() {
+    if (favorites.length === 0) return;
+    const combined = favorites.map((f) => f.text).join('\n\n---\n\n');
+    await copyText(combined);
+    toast.success(`Copied all ${favorites.length} favorites!`);
+  }
 
   // BYOK
   let byokConfigured = $state(false);
@@ -150,7 +179,17 @@
     </span>
     QuickieTime
   </a>
-  <nav aria-label="Dashboard navigation">
+  <nav aria-label="Dashboard navigation" class="flex items-center gap-2 sm:gap-3">
+    <button
+      type="button"
+      class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--muted)] text-[var(--subtle)] hover:text-[var(--ink)] hover:border-[#a6c64d] text-xs font-medium transition-all"
+      onclick={() => (commandPaletteOpen = true)}
+      title="Search tools and commands (Ctrl+K)"
+    >
+      <Search size={14} />
+      <span>Search tools…</span>
+      <kbd class="px-1.5 py-0.5 rounded bg-[var(--panel)] border border-[var(--border)] font-mono text-[10px]">⌘K</kbd>
+    </button>
     <a href="/" class="text-sm font-semibold">Studio ↗</a>
     <a href="/pricing" class="text-sm font-semibold">Plans</a>
     <a href="/account" class="text-sm font-semibold">Account</a>
@@ -317,26 +356,54 @@
   <!-- View: Favorites -->
   {#if view === 'favorites'}
     <div class="mt-6">
-      {#if favorites.length === 0}
+      <!-- Favorites Header Toolbar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        {#if favorites.length > 2}
+          <div class="relative flex-1 max-w-xs">
+            <input
+              type="search"
+              placeholder="Filter favorites…"
+              bind:value={favQuery}
+              class="w-full py-1.5 px-3 pl-8 rounded-xl border border-[var(--border)] bg-[var(--panel)] text-xs text-[var(--ink)]"
+            />
+            <Search size={13} class="absolute left-2.5 top-2.5 text-[var(--subtle)] pointer-events-none" />
+          </div>
+        {/if}
+
+        {#if favorites.length > 1}
+          <button
+            type="button"
+            class="text-xs py-1.5 px-3 rounded-xl border border-[var(--border)] bg-[var(--panel)] hover:bg-[var(--muted)] text-[var(--ink)] font-semibold inline-flex items-center gap-1.5 ml-auto transition-all"
+            onclick={copyAllFavorites}
+          >
+            <Copy size={13} /> Copy All ({favorites.length})
+          </button>
+        {/if}
+      </div>
+
+      {#if filteredFavorites.length === 0}
         <div class="empty">
           <Heart size={32} />
-          <h3>No favorites saved yet</h3>
-          <p>Tap the heart icon on any generated result to bookmark it here.</p>
+          <h3>{favorites.length === 0 ? 'No favorites saved yet' : 'No matching favorites'}</h3>
+          <p>{favorites.length === 0 ? 'Tap the heart icon on any generated result to bookmark it here.' : 'Try changing your filter query above.'}</p>
         </div>
       {:else}
         <div class="grid gap-3">
-          {#each favorites as fav (fav.id)}
-            <div class="p-5 rounded-2xl border border-[var(--border)] bg-[var(--panel)] flex items-center justify-between gap-4">
-              <p class="text-lg font-medium">{fav.text}</p>
+          {#each filteredFavorites as fav (fav.id)}
+            <div class="p-4 sm:p-5 rounded-2xl border border-[var(--border)] bg-[var(--panel)] flex items-center justify-between gap-4">
+              <p class="text-base sm:text-lg font-medium min-w-0 flex-1 break-words">{fav.text}</p>
               <button
                 type="button"
-                class="primary-button text-xs py-2 px-4 flex-none"
-                onclick={() => {
-                  copyText(fav.text);
-                  toast.success('Copied!');
-                }}
+                class={`primary-button text-xs py-2 px-3.5 flex-none inline-flex items-center gap-1.5 font-bold shadow-sm transition-all ${
+                  copiedFavId === fav.id ? 'bg-[#9be81e]' : ''
+                }`}
+                onclick={() => copyFavorite(fav.id, fav.text)}
               >
-                <Copy size={14} /> Copy
+                {#if copiedFavId === fav.id}
+                  <Check size={14} /> Copied!
+                {:else}
+                  <Copy size={14} /> Copy
+                {/if}
               </button>
             </div>
           {/each}
@@ -352,7 +419,7 @@
         <h2 class="text-xl font-bold">Projects</h2>
         <button
           type="button"
-          class="primary-button text-sm py-2 px-4 inline-flex items-center gap-1.5"
+          class="primary-button text-sm py-2 px-4 inline-flex items-center gap-1.5 flex-none"
           onclick={() => (projectModalOpen = true)}
         >
           <Plus size={16} /> New project
@@ -428,7 +495,7 @@
           </label>
         {/if}
 
-        <button type="submit" class="primary-button py-3 mt-4">
+        <button type="submit" class="primary-button py-3 mt-4 w-full justify-center">
           Save & Enable BYOK Unlimited
         </button>
       </form>
@@ -450,17 +517,17 @@
         bind:value={newProjectName}
         class="w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--page)] mb-4 text-base"
       />
-      <div class="flex justify-end gap-2">
+      <div class="flex justify-end gap-3 mt-4">
         <button
           type="button"
-          class="px-4 py-2 rounded-lg border border-[var(--border)] text-sm"
+          class="px-4 py-2 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)]"
           onclick={() => (projectModalOpen = false)}
         >
           Cancel
         </button>
         <button
           type="button"
-          class="primary-button text-sm py-2 px-4"
+          class="primary-button text-sm py-2 px-4 flex-none inline-flex items-center"
           onclick={createProject}
         >
           Create
@@ -469,3 +536,5 @@
     </div>
   </div>
 {/if}
+
+<CommandPalette bind:isOpen={commandPaletteOpen} />

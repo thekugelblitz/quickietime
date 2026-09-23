@@ -108,7 +108,7 @@
       <p role="alert" class="error">{error}</p>
     {/if}
 
-    <button class="primary-button" type="submit" disabled={busy}>
+    <button class="primary-button w-full justify-center" type="submit" disabled={busy}>
       {busy ? 'One moment…' : sent ? 'Verify & sign in' : 'Email me a code'}
     </button>
 
